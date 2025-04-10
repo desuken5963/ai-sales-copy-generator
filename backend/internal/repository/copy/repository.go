@@ -2,6 +2,7 @@ package copy_repository
 
 import (
 	"context"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -18,5 +19,10 @@ func NewRepository(db *gorm.DB) repository.CopyRepository {
 }
 
 func (r *copyRepository) Create(ctx context.Context, copy *entity.Copy) error {
+	// デフォルト値の設定
+	copy.Likes = 0
+	copy.CreatedAt = time.Now()
+	copy.UpdatedAt = time.Now()
+
 	return r.db.WithContext(ctx).Create(copy).Error
 }

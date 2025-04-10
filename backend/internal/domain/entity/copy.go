@@ -28,7 +28,7 @@ const (
 
 // Copy: 販促文エンティティ
 type Copy struct {
-	ID              string    `json:"id"`
+	ID              int       `json:"id" gorm:"primaryKey;autoIncrement"`
 	Title           string    `json:"title"`
 	Description     string    `json:"description"`
 	Channel         Channel   `json:"channel"`
