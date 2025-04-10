@@ -24,6 +24,7 @@ type CreateCopyRequest struct {
 	Target          string         `json:"target" binding:"required"`
 	Channel         entity.Channel `json:"channel" binding:"required"`
 	Tone            entity.Tone    `json:"tone" binding:"required"`
+	IsPublished     bool           `json:"isPublished"`
 }
 
 func NewHandler(repo repository.CopyRepository) Handler {
@@ -45,6 +46,7 @@ func (h *handler) CreateCopy(c *gin.Context) {
 		Target:          req.Target,
 		Channel:         req.Channel,
 		Tone:            req.Tone,
+		IsPublished:     req.IsPublished,
 	}
 
 	copy, err := h.usecase.CreateCopy(c.Request.Context(), input)

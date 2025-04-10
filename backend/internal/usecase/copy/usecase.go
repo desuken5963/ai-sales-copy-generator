@@ -26,6 +26,7 @@ type CreateCopyInput struct {
 	Target          string
 	Channel         entity.Channel
 	Tone            entity.Tone
+	IsPublished     bool
 }
 
 type openAIResponse struct {
@@ -81,7 +82,7 @@ func (u *useCase) CreateCopy(ctx context.Context, input CreateCopyInput) (*entit
 		Channel:         input.Channel,
 		Tone:            input.Tone,
 		Likes:           0,
-		IsPublished:     false,
+		IsPublished:     input.IsPublished,
 	}
 
 	// リポジトリへの保存
