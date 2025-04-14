@@ -10,5 +10,6 @@ func SetupCopyRoutes(r *gin.Engine, handler copy_handler.Handler) {
 	v1 := r.Group("/api/v1")
 	{
 		v1.POST("/copies", handler.CreateCopy)
+		v1.GET("/copies/:id", handler.GetCopy)
 	}
 }

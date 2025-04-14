@@ -26,3 +26,11 @@ func (r *copyRepository) Create(ctx context.Context, copy *entity.Copy) error {
 
 	return r.db.WithContext(ctx).Create(copy).Error
 }
+
+func (r *copyRepository) Get(ctx context.Context, id int) (*entity.Copy, error) {
+	var copy entity.Copy
+	if err := r.db.WithContext(ctx).First(&copy, id).Error; err != nil {
+		return nil, err
+	}
+	return &copy, nil
+}

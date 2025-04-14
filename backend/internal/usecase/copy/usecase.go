@@ -14,6 +14,7 @@ import (
 
 type UseCase interface {
 	CreateCopy(ctx context.Context, input CreateCopyInput) (*entity.Copy, error)
+	GetCopy(ctx context.Context, id int) (*entity.Copy, error)
 }
 
 type useCase struct {
@@ -101,4 +102,13 @@ func generatePrompt(input CreateCopyInput) string {
   "title": "タイトル（20文字以内）",
   "description": "本文（50〜100文字以内）"
 }`
+}
+
+func (u *useCase) GetCopy(ctx context.Context, id int) (*entity.Copy, error) {
+	copy, err := u.repo.Get(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return copy, nil
 }

@@ -2,6 +2,7 @@ package copy_handler
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 
@@ -12,6 +13,7 @@ import (
 
 type Handler interface {
 	CreateCopy(c *gin.Context)
+	GetCopy(c *gin.Context)
 }
 
 type handler struct {
@@ -56,4 +58,20 @@ func (h *handler) CreateCopy(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, copy)
+}
+
+func (h *handler) GetCopy(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id parameter"})
+		return
+	}
+
+	copy, err := h.usecase.GetCopy(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, copy)
 }
