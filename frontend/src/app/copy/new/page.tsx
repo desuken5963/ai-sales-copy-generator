@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { Textarea } from '@/components/Textarea';
@@ -26,12 +27,9 @@ const TONE_OPTIONS = [
 ];
 
 export default function NewCopyPage() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
-  const [generatedCopy, setGeneratedCopy] = useState<{
-    title: string;
-    description: string;
-  } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -49,10 +47,7 @@ export default function NewCopyPage() {
 
     try {
       const response = await createCopy(requestData);
-      setGeneratedCopy({
-        title: response.title,
-        description: response.description,
-      });
+      router.push(`/copies/${response.id}`);
     } catch (error) {
       console.error('Failed to create copy:', error);
       // TODO: エラーハンドリングの実装
@@ -120,43 +115,6 @@ export default function NewCopyPage() {
             </Button>
           </div>
         </form>
-
-        {generatedCopy && (
-          <div className="mt-8 bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4 text-primary">生成された販促文</h2>
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-medium text-secondary mb-2">タイトル</h3>
-                <p className="text-lg font-bold text-blue-600">{generatedCopy.title}</p>
-              </div>
-              <div>
-                <h3 className="font-medium text-secondary mb-2">本文</h3>
-                <p className="whitespace-pre-line text-primary">{generatedCopy.description}</p>
-              </div>
-            </div>
-            <div className="flex gap-4 mt-6">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  navigator.clipboard.writeText(
-                    `${generatedCopy.title}\n\n${generatedCopy.description}`
-                  );
-                }}
-              >
-                コピー
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setGeneratedCopy(null);
-                  setIsLoading(false);
-                }}
-              >
-                再生成
-              </Button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
