@@ -34,3 +34,12 @@ func (r *copyRepository) Get(ctx context.Context, id int) (*entity.Copy, error) 
 	}
 	return &copy, nil
 }
+
+// GetPublished: 公開済みのコピーのみを取得
+func (r *copyRepository) GetPublished(ctx context.Context) ([]*entity.Copy, error) {
+	var copies []*entity.Copy
+	if err := r.db.WithContext(ctx).Where("is_published = ?", true).Find(&copies).Error; err != nil {
+		return nil, err
+	}
+	return copies, nil
+}

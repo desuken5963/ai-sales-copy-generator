@@ -15,6 +15,7 @@ import (
 type UseCase interface {
 	CreateCopy(ctx context.Context, input CreateCopyInput) (*entity.Copy, error)
 	GetCopy(ctx context.Context, id int) (*entity.Copy, error)
+	GetPublishedCopies(ctx context.Context) ([]*entity.Copy, error)
 }
 
 type useCase struct {
@@ -111,4 +112,25 @@ func (u *useCase) GetCopy(ctx context.Context, id int) (*entity.Copy, error) {
 	}
 
 	return copy, nil
+}
+
+// GetPublishedCopies: 公開済みのコピーの一覧を取得
+//
+// アーキテクチャ上の考察:
+// このメソッドは、リポジトリ層で公開済みのフィルタリングを行っています。
+// 本来、公開済みのフィルタリングはビジネスロジックとしてユースケース層に実装することも可能ですが、
+// 以下の理由からリポジトリ層で実装することを選択しています：
+// 1. is_publishedは単純なブール値フラグで、複雑なビジネスロジックを含まない
+// 2. データベースレベルでのフィルタリングにより、パフォーマンスが向上
+// 3. 将来的なデータ量の増加を考慮した場合、データベースでのフィルタリングが効率的
+//
+// 将来的に「公開」の定義が複雑になる可能性がある場合は、
+// ユースケース層に移動することを検討する必要があります。
+func (u *useCase) GetPublishedCopies(ctx context.Context) ([]*entity.Copy, error) {
+	copies, err := u.repo.GetPublished(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return copies, nil
 }

@@ -14,6 +14,7 @@ import (
 type Handler interface {
 	CreateCopy(c *gin.Context)
 	GetCopy(c *gin.Context)
+	GetPublishedCopies(c *gin.Context)
 }
 
 type handler struct {
@@ -74,4 +75,14 @@ func (h *handler) GetCopy(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, copy)
+}
+
+func (h *handler) GetPublishedCopies(c *gin.Context) {
+	copies, err := h.usecase.GetPublishedCopies(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, copies)
 }
