@@ -25,6 +25,7 @@ const TONE_OPTIONS = [
 
 export default function NewCopyPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
   const [generatedCopy, setGeneratedCopy] = useState<{
     title: string;
     description: string;
@@ -85,8 +86,8 @@ export default function NewCopyPage() {
 
           <Toggle
             label="公開設定"
-            checked={false}
-            onChange={() => { }}
+            checked={isPublic}
+            onChange={(checked) => setIsPublic(checked)}
           />
 
           <div className="flex justify-center">
