@@ -8,10 +8,10 @@ export default function Home() {
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-primary mb-6">
-            AIパーソナライズ販促文最適化ツール
+            AIパーソナライズ販促コピー最適化ツール
           </h1>
           <p className="text-xl text-secondary mb-8 max-w-3xl mx-auto">
-            ターゲット層に合わせて最適化された販促文を、AIが自動生成します。
+            ターゲット層に合わせて最適化された販促コピーを、AIが自動生成します。
             商品の特徴を入力するだけで、効果的なコピーが作成できます。
           </p>
           <Link href="/copy/new">
@@ -49,9 +49,9 @@ export default function Home() {
               <div className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-4">
                 3
               </div>
-              <h3 className="text-xl font-semibold mb-2 text-primary">販促文を生成</h3>
+              <h3 className="text-xl font-semibold mb-2 text-primary">販促コピーを生成</h3>
               <p className="text-secondary">
-                AIが最適化された販促文を生成します。必要に応じて再生成や編集も可能です。
+                AIが最適化された販促コピーを生成します。必要に応じて再生成や編集も可能です。
               </p>
             </div>
           </div>
@@ -63,11 +63,11 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl font-bold mb-6 text-primary">さっそく始めてみましょう</h2>
           <p className="text-xl text-secondary mb-8">
-            無料で利用できます。今すぐ販促文を生成してみましょう。
+            無料で利用できます。今すぐ販促コピーを生成してみましょう。
           </p>
           <Link href="/copy/new">
             <Button variant="primary" className="text-lg px-8 py-4">
-              販促文を生成する
+              販促コピーを生成する
             </Button>
           </Link>
         </div>

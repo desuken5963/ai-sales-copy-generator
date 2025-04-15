@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Copy Generator - AIパーソナライズ販促文最適化ツール",
-  description: "ターゲット層に合わせて最適化された販促文を、AIが自動生成します。",
+  title: "AI Copy Generator - AIパーソナライズ販促コピー最適化ツール",
+  description: "ターゲット層に合わせて最適化された販促コピーを、AIが自動生成します。",
 };
 
 export default function RootLayout({

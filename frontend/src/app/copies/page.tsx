@@ -66,7 +66,7 @@ export default function CopiesPage() {
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-primary">公開済み販促文</h1>
+          <h1 className="text-3xl font-bold text-primary">公開済み販促コピー</h1>
           <Button variant="primary">新規作成</Button>
         </div>
 

@@ -26,7 +26,7 @@ const (
 	ToneCasual Tone = "casual"
 )
 
-// Copy: 販促文エンティティ
+// Copy: 販促コピーエンティティ
 type Copy struct {
 	ID              int       `json:"id" gorm:"primaryKey;autoIncrement"`
 	Title           string    `json:"title"`
