@@ -10,10 +10,19 @@ export interface CreateCopyRequest {
   isPublished: boolean;
 }
 
-export interface CopyResponse {
+interface BaseCopyResponse {
   id: string;
-  title: string;
-  description: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CreateCopyResponse extends BaseCopyResponse {}
+
+export interface GetCopyResponse extends BaseCopyResponse {
+  title: string;
+  description: string;
+  likes: number;
+  channel: Channel;
+  tone: Tone;
+  target: string;
 } 
