@@ -157,17 +157,8 @@ export default function CopiesPage() {
                   >
                     ♥ {copy.likes}
                   </button>
-                  <button
-                    className="text-muted hover:text-secondary"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      navigator.clipboard.writeText(`${copy.title}\n\n${copy.description}`);
-                    }}
-                  >
-                    コピー
-                  </button>
                 </div>
-                <span className="text-sm text-muted">{new Date(copy.createdAt).toLocaleDateString('ja-JP')}</span>
+                <span className="text-sm text-muted">作成日: {new Date(copy.createdAt).toLocaleDateString('ja-JP')}</span>
               </div>
             </Link>
           ))}
