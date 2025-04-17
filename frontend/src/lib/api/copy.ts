@@ -1,5 +1,5 @@
 import client from './client';
-import { CreateCopyRequest, CreateCopyResponse, GetCopyResponse } from './types';
+import { CreateCopyRequest, CreateCopyResponse, GetCopyResponse, GetCopiesResponse } from './types';
 
 export const createCopy = async (data: CreateCopyRequest): Promise<CreateCopyResponse> => {
   console.log('Request data:', data);
@@ -9,5 +9,10 @@ export const createCopy = async (data: CreateCopyRequest): Promise<CreateCopyRes
 
 export const getCopy = async (id: string): Promise<GetCopyResponse> => {
   const response = await client.get<GetCopyResponse>(`/copies/${id}`);
+  return response.data;
+};
+
+export const getCopies = async (): Promise<GetCopiesResponse> => {
+  const response = await client.get<GetCopiesResponse>('/copies');
   return response.data;
 }; 

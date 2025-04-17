@@ -25,4 +25,6 @@ export interface GetCopyResponse extends BaseCopyResponse {
   channel: Channel;
   tone: Tone;
   target: string;
-} 
+}
+
+export type GetCopiesResponse = GetCopyResponse[]; 
