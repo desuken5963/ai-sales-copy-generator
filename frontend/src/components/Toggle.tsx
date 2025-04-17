@@ -16,6 +16,7 @@ export const Toggle = forwardRef<HTMLButtonElement, ToggleProps>(
           </label>
         )}
         <button
+          type="button"
           ref={ref}
           role="switch"
           aria-checked={checked}

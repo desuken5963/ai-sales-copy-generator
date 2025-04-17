@@ -20,7 +20,7 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/copies" className="text-base text-gray-500 hover:text-gray-900">
-                  販促文一覧
+                  販促コピー一覧
                 </Link>
               </li>
             </ul>

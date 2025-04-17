@@ -1,25 +1,39 @@
 'use client';
 
 import { Button } from '@/components/Button';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { use } from 'react';
+import { getCopy } from '@/lib/api/copy';
+import { GetCopyResponse } from '@/lib/api/types';
 
-// 仮のデータ
-const MOCK_COPY = {
-  id: '1',
-  title: '【期間限定】新商品のご案内',
-  description: '今だけの特別価格で、あなたの生活を彩る新商品をお届けします。\n\n商品の特徴を活かした、使いやすいデザインと高品質な素材で、毎日の生活をより快適に。\n\nこの機会にぜひお試しください。',
-  channel: 'app',
-  tone: 'pop',
-  target: '30-40代の会社員',
-  likes: 12,
-  createdAt: '2024-03-29',
-};
+export default function CopyDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
+  const [copy, setCopy] = useState<GetCopyResponse | null>(null);
+  const [likes, setLikes] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-export default function CopyDetailPage({ params }: { params: { id: string } }) {
-  const [likes, setLikes] = useState(MOCK_COPY.likes);
+  useEffect(() => {
+    const fetchCopy = async () => {
+      try {
+        const data = await getCopy(resolvedParams.id);
+        setCopy(data);
+        setLikes(data.likes || 0);
+      } catch (err) {
+        setError('コピーの取得に失敗しました');
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCopy();
+  }, [resolvedParams.id]);
 
   const handleShare = (platform: string) => {
-    const text = encodeURIComponent(`${MOCK_COPY.title}\n\n${MOCK_COPY.description}`);
+    if (!copy) return;
+
+    const text = encodeURIComponent(`${copy.title}\n\n${copy.description}`);
     const url = encodeURIComponent(window.location.href);
 
     let shareUrl = '';
@@ -42,13 +56,44 @@ export default function CopyDetailPage({ params }: { params: { id: string } }) {
     setLikes(prev => prev + 1);
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-white p-8 rounded-lg shadow">
+            <div className="animate-pulse">
+              <div className="h-8 bg-gray-200 rounded w-3/4 mb-4"></div>
+              <div className="space-y-3">
+                <div className="h-4 bg-gray-200 rounded w-full"></div>
+                <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                <div className="h-4 bg-gray-200 rounded w-4/6"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !copy) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-white p-8 rounded-lg shadow text-center">
+            <p className="text-red-500">{error || 'コピーが見つかりませんでした'}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white p-8 rounded-lg shadow">
           <div className="mb-8">
             <div className="flex justify-between items-start mb-4">
-              <h1 className="text-3xl font-bold text-primary">{MOCK_COPY.title}</h1>
+              <h1 className="text-3xl font-bold text-primary">{copy.title}</h1>
               <button
                 onClick={handleLike}
                 className="flex items-center gap-1 text-red-500 hover:text-red-600 transition-colors"
@@ -57,7 +102,7 @@ export default function CopyDetailPage({ params }: { params: { id: string } }) {
                 <span className="text-lg">{likes}</span>
               </button>
             </div>
-            <p className="whitespace-pre-line text-secondary">{MOCK_COPY.description}</p>
+            <p className="whitespace-pre-line text-secondary">{copy.description}</p>
           </div>
 
           <div className="border-t border-gray-200 pt-6">
@@ -73,11 +118,11 @@ export default function CopyDetailPage({ params }: { params: { id: string } }) {
               </div>
               <div>
                 <span className="font-medium">ターゲット:</span>
-                <span className="ml-2">{MOCK_COPY.target}</span>
+                <span className="ml-2">30-40代の会社員</span>
               </div>
               <div>
                 <span className="font-medium">作成日:</span>
-                <span className="ml-2">{MOCK_COPY.createdAt}</span>
+                <span className="ml-2">{new Date(copy.createdAt).toLocaleDateString('ja-JP')}</span>
               </div>
             </div>
           </div>

@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/Button';
 import { Select } from '@/components/Select';
 import { Input } from '@/components/Input';
 import Link from 'next/link';
+import { getCopies } from '@/lib/api/copy';
+import { GetCopyResponse } from '@/lib/api/types';
 
 const CHANNEL_OPTIONS = [
   { value: '', label: 'すべて' },
@@ -24,35 +26,31 @@ const TONE_OPTIONS = [
   { value: 'casual', label: 'カジュアル' },
 ];
 
-// 仮のデータ
-const MOCK_COPIES = [
-  {
-    id: '1',
-    title: '【期間限定】新商品のご案内',
-    description: '今だけの特別価格で、あなたの生活を彩る新商品をお届けします。商品の特徴を活かした、使いやすいデザインと高品質な素材で、毎日の生活をより快適に。',
-    channel: 'app',
-    tone: 'pop',
-    likes: 12,
-    createdAt: '2024-03-29',
-  },
-  {
-    id: '2',
-    title: 'プレミアムコーヒーの世界へようこそ',
-    description: '厳選された豆から作られた一杯のコーヒーが、あなたの日常に特別なひとときを。',
-    channel: 'line',
-    tone: 'luxury',
-    likes: 8,
-    createdAt: '2024-03-28',
-  },
-  // 他のサンプルデータ...
-];
-
 export default function CopiesPage() {
+  const [copies, setCopies] = useState<GetCopyResponse[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedChannel, setSelectedChannel] = useState('');
   const [selectedTone, setSelectedTone] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredCopies = MOCK_COPIES.filter((copy) => {
+  useEffect(() => {
+    const fetchCopies = async () => {
+      try {
+        const response = await getCopies();
+        setCopies(response || []);
+      } catch (err) {
+        setError('コピーの取得に失敗しました');
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCopies();
+  }, []);
+
+  const filteredCopies = copies.filter((copy) => {
     const matchesChannel = !selectedChannel || copy.channel === selectedChannel;
     const matchesTone = !selectedTone || copy.tone === selectedTone;
     const matchesSearch = !searchQuery ||
@@ -62,12 +60,50 @@ export default function CopiesPage() {
     return matchesChannel && matchesTone && matchesSearch;
   });
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mb-8"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="bg-white p-6 rounded-lg shadow">
+                  <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
+                  <div className="space-y-3">
+                    <div className="h-4 bg-gray-200 rounded w-full"></div>
+                    <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                    <div className="h-4 bg-gray-200 rounded w-4/6"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-white p-6 rounded-lg shadow text-center">
+            <p className="text-red-500">{error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-primary">公開済み販促文</h1>
-          <Button variant="primary">新規作成</Button>
+          <h1 className="text-3xl font-bold text-primary">公開済み販促コピー</h1>
+          <Link href="/copy/new">
+            <Button variant="primary">新規作成</Button>
+          </Link>
         </div>
 
         {/* フィルターバー */}
@@ -121,17 +157,8 @@ export default function CopiesPage() {
                   >
                     ♥ {copy.likes}
                   </button>
-                  <button
-                    className="text-muted hover:text-secondary"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      navigator.clipboard.writeText(`${copy.title}\n\n${copy.description}`);
-                    }}
-                  >
-                    コピー
-                  </button>
                 </div>
-                <span className="text-sm text-muted">{copy.createdAt}</span>
+                <span className="text-sm text-muted">作成日: {new Date(copy.createdAt).toLocaleDateString('ja-JP')}</span>
               </div>
             </Link>
           ))}
