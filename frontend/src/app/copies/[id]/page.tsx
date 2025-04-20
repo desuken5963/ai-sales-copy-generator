@@ -3,7 +3,7 @@
 import { Button } from '@/components/Button';
 import { useState, useEffect } from 'react';
 import { use } from 'react';
-import { getCopy } from '@/lib/api/copy';
+import { getCopy, updateLikes } from '@/lib/api/copy';
 import { GetCopyResponse } from '@/lib/api/types';
 
 export default function CopyDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -12,6 +12,7 @@ export default function CopyDetailPage({ params }: { params: Promise<{ id: strin
   const [likes, setLikes] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isLiking, setIsLiking] = useState(false);
 
   useEffect(() => {
     const fetchCopy = async () => {
@@ -52,8 +53,18 @@ export default function CopyDetailPage({ params }: { params: Promise<{ id: strin
     window.open(shareUrl, '_blank', 'width=600,height=400');
   };
 
-  const handleLike = () => {
-    setLikes(prev => prev + 1);
+  const handleLike = async () => {
+    if (!copy || isLiking) return;
+    
+    try {
+      setIsLiking(true);
+      const updatedCopy = await updateLikes(copy.id);
+      setLikes(updatedCopy.likes);
+    } catch (err) {
+      console.error('いいねの更新に失敗しました:', err);
+    } finally {
+      setIsLiking(false);
+    }
   };
 
   if (isLoading) {
@@ -96,7 +107,10 @@ export default function CopyDetailPage({ params }: { params: Promise<{ id: strin
               <h1 className="text-3xl font-bold text-primary">{copy.title}</h1>
               <button
                 onClick={handleLike}
-                className="flex items-center gap-1 text-red-500 hover:text-red-600 transition-colors"
+                disabled={isLiking}
+                className={`flex items-center gap-1 text-red-500 hover:text-red-600 transition-colors ${
+                  isLiking ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
               >
                 <span className="text-2xl">♥</span>
                 <span className="text-lg">{likes}</span>

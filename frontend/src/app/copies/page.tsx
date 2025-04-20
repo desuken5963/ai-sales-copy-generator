@@ -5,7 +5,7 @@ import { Button } from '@/components/Button';
 import { Select } from '@/components/Select';
 import { Input } from '@/components/Input';
 import Link from 'next/link';
-import { getCopies } from '@/lib/api/copy';
+import { getCopies, updateLikes } from '@/lib/api/copy';
 import { GetCopyResponse } from '@/lib/api/types';
 
 const CHANNEL_OPTIONS = [
@@ -33,6 +33,7 @@ export default function CopiesPage() {
   const [selectedChannel, setSelectedChannel] = useState('');
   const [selectedTone, setSelectedTone] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [likingCopies, setLikingCopies] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const fetchCopies = async () => {
@@ -49,6 +50,26 @@ export default function CopiesPage() {
 
     fetchCopies();
   }, []);
+
+  const handleLike = async (copyId: string) => {
+    if (likingCopies.has(copyId)) return;
+
+    try {
+      setLikingCopies(prev => new Set(prev).add(copyId));
+      const updatedCopy = await updateLikes(copyId);
+      setCopies(prev => prev.map(copy => 
+        copy.id === copyId ? updatedCopy : copy
+      ));
+    } catch (err) {
+      console.error('いいねの更新に失敗しました:', err);
+    } finally {
+      setLikingCopies(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(copyId);
+        return newSet;
+      });
+    }
+  };
 
   const filteredCopies = copies.filter((copy) => {
     const matchesChannel = !selectedChannel || copy.channel === selectedChannel;
@@ -147,17 +168,18 @@ export default function CopiesPage() {
                 </div>
               </div>
               <div className="flex items-center justify-between mt-auto">
-                <div className="flex items-center gap-2">
-                  <button
-                    className="text-red-500 hover:text-red-600"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      // いいね機能の実装
-                    }}
-                  >
-                    ♥ {copy.likes}
-                  </button>
-                </div>
+                <button
+                  className={`text-red-500 hover:text-red-600 ${
+                    likingCopies.has(copy.id) ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleLike(copy.id);
+                  }}
+                  disabled={likingCopies.has(copy.id)}
+                >
+                  ♥ {copy.likes}
+                </button>
                 <span className="text-sm text-muted">作成日: {new Date(copy.createdAt).toLocaleDateString('ja-JP')}</span>
               </div>
             </Link>
