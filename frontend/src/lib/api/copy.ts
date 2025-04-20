@@ -15,4 +15,9 @@ export const getCopy = async (id: string): Promise<GetCopyResponse> => {
 export const getCopies = async (): Promise<GetCopiesResponse> => {
   const response = await client.get<GetCopiesResponse>('/copies');
   return response.data;
+};
+
+export const updateLikes = async (id: string): Promise<GetCopyResponse> => {
+  const response = await client.put<GetCopyResponse>(`/copies/${id}/likes`);
+  return response.data;
 }; 

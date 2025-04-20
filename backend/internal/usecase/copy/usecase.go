@@ -16,6 +16,7 @@ type UseCase interface {
 	CreateCopy(ctx context.Context, input CreateCopyInput) (*entity.Copy, error)
 	GetCopy(ctx context.Context, id int) (*entity.Copy, error)
 	GetPublishedCopies(ctx context.Context) ([]*entity.Copy, error)
+	UpdateLikes(ctx context.Context, id int) (*entity.Copy, error)
 }
 
 type useCase struct {
@@ -133,4 +134,18 @@ func (u *useCase) GetPublishedCopies(ctx context.Context) ([]*entity.Copy, error
 	}
 
 	return copies, nil
+}
+
+func (u *useCase) UpdateLikes(ctx context.Context, id int) (*entity.Copy, error) {
+	copy, err := u.repo.Get(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	copy.Likes++
+	if err := u.repo.UpdateLikes(ctx, id, copy.Likes); err != nil {
+		return nil, err
+	}
+
+	return copy, nil
 }

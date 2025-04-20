@@ -15,6 +15,7 @@ type Handler interface {
 	CreateCopy(c *gin.Context)
 	GetCopy(c *gin.Context)
 	GetPublishedCopies(c *gin.Context)
+	UpdateLikes(c *gin.Context)
 }
 
 type handler struct {
@@ -85,4 +86,20 @@ func (h *handler) GetPublishedCopies(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, copies)
+}
+
+func (h *handler) UpdateLikes(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id parameter"})
+		return
+	}
+
+	copy, err := h.usecase.UpdateLikes(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, copy)
 }
