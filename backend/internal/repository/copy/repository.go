@@ -43,3 +43,7 @@ func (r *copyRepository) GetPublished(ctx context.Context) ([]*entity.Copy, erro
 	}
 	return copies, nil
 }
+
+func (r *copyRepository) UpdateLikes(ctx context.Context, id int, likes int) error {
+	return r.db.WithContext(ctx).Model(&entity.Copy{}).Where("id = ?", id).Update("likes", likes).Error
+}
