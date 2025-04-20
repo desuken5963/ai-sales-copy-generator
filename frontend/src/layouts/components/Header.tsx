@@ -5,7 +5,13 @@ import { useState, useRef, useEffect } from 'react';
 
 export const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const headerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -61,32 +67,33 @@ export const Header = () => {
           </div>
 
           {/* ナビゲーション */}
-          <nav
-            className={`
-              ${isMenuOpen ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'} 
-              md:max-h-full md:opacity-100
-              overflow-hidden
-              transition-all duration-300 ease-in-out
-              md:flex md:items-center w-full md:w-auto pb-4 md:pb-0
-            `}
-          >
-            <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4">
-              <Link
-                href="/copy/new"
-                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                新規作成
-              </Link>
-              <Link
-                href="/copies"
-                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                販促コピー一覧
-              </Link>
-            </div>
-          </nav>
+          <div className="hidden md:block w-full md:w-auto">
+            <nav
+              className={`
+                ${isMounted ? 'transition-all duration-300 ease-in-out' : ''}
+                ${!isMenuOpen && 'hidden md:block'}
+                overflow-hidden
+                md:flex md:items-center
+              `}
+            >
+              <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4">
+                <Link
+                  href="/copy/new"
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  新規作成
+                </Link>
+                <Link
+                  href="/copies"
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  販促コピー一覧
+                </Link>
+              </div>
+            </nav>
+          </div>
         </div>
       </div>
     </header>
