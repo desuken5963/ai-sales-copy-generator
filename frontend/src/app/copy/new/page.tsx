@@ -7,6 +7,7 @@ import { Input } from '@/components/Input';
 import { Textarea } from '@/components/Textarea';
 import { Select } from '@/components/Select';
 import { Toggle } from '@/components/Toggle';
+import { Toast } from '@/components/Toast';
 import { createCopy } from '@/lib/api/copy';
 import { CreateCopyRequest } from '@/lib/api/types';
 
@@ -30,6 +31,7 @@ export default function NewCopyPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -47,10 +49,16 @@ export default function NewCopyPage() {
 
     try {
       const response = await createCopy(requestData);
-      router.push(`/copies/${response.id}`);
+      setToast({ message: 'コピーが正常に作成されました', type: 'success' });
+      setTimeout(() => {
+        router.push(`/copies/${response.id}`);
+      }, 1500);
     } catch (error) {
       console.error('Failed to create copy:', error);
-      // TODO: エラーハンドリングの実装
+      setToast({
+        message: 'コピーの作成に失敗しました。もう一度お試しください。',
+        type: 'error',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -116,6 +124,13 @@ export default function NewCopyPage() {
           </div>
         </form>
       </div>
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 } 
