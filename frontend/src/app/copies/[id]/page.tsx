@@ -6,6 +6,22 @@ import { use } from 'react';
 import { getCopy, updateLikes } from '@/lib/api/copy';
 import { GetCopyResponse } from '@/lib/api/types';
 
+const CHANNEL_LABELS: Record<string, string> = {
+  app: 'アプリ通知',
+  line: 'LINE広告',
+  pop: '店舗POP',
+  sns: 'SNS投稿',
+  email: 'メールマガジン',
+};
+
+const TONE_LABELS: Record<string, string> = {
+  pop: 'ポップ',
+  trust: '信頼感',
+  value: 'お得感',
+  luxury: '高級感',
+  casual: 'カジュアル',
+};
+
 export default function CopyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const [copy, setCopy] = useState<GetCopyResponse | null>(null);
@@ -124,15 +140,15 @@ export default function CopyDetailPage({ params }: { params: Promise<{ id: strin
             <div className="grid grid-cols-2 gap-4 text-sm text-secondary">
               <div>
                 <span className="font-medium">配信チャネル:</span>
-                <span className="ml-2">アプリ通知</span>
+                <span className="ml-2">{CHANNEL_LABELS[copy.channel]}</span>
               </div>
               <div>
                 <span className="font-medium">トーン:</span>
-                <span className="ml-2">ポップ</span>
+                <span className="ml-2">{TONE_LABELS[copy.tone]}</span>
               </div>
               <div>
                 <span className="font-medium">ターゲット:</span>
-                <span className="ml-2">30-40代の会社員</span>
+                <span className="ml-2">{copy.target}</span>
               </div>
               <div>
                 <span className="font-medium">作成日:</span>
