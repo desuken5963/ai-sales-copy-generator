@@ -74,6 +74,7 @@ func TestCreateCopy(t *testing.T) {
 		input   CreateCopyInput
 		want    *entity.Copy
 		wantErr bool
+		errMsg  string
 	}{
 		{
 			name: "正常系",
@@ -110,6 +111,21 @@ func TestCreateCopy(t *testing.T) {
 			},
 			want:    nil,
 			wantErr: true,
+			errMsg:  "repository error",
+		},
+		{
+			name: "異常系_OpenAIエラー",
+			input: CreateCopyInput{
+				ProductName:     "テスト商品",
+				ProductFeatures: "高品質、使いやすい",
+				Target:          "20-30代女性",
+				Channel:         entity.ChannelSNS,
+				Tone:            entity.ToneCasual,
+				IsPublished:     true,
+			},
+			want:    nil,
+			wantErr: true,
+			errMsg:  "openai error",
 		},
 	}
 
@@ -120,8 +136,12 @@ func TestCreateCopy(t *testing.T) {
 			mockOpenAI := new(mockOpenAIClient)
 
 			if tt.wantErr {
-				mockOpenAI.On("CreateChatCompletion", mock.Anything, mock.Anything).Return(mockResponse, nil)
-				mockRepo.On("Create", mock.Anything, mock.Anything).Return(errors.New("repository error"))
+				if tt.errMsg == "repository error" {
+					mockOpenAI.On("CreateChatCompletion", mock.Anything, mock.Anything).Return(mockResponse, nil)
+					mockRepo.On("Create", mock.Anything, mock.Anything).Return(errors.New(tt.errMsg))
+				} else if tt.errMsg == "openai error" {
+					mockOpenAI.On("CreateChatCompletion", mock.Anything, mock.Anything).Return(openai.ChatCompletionResponse{}, errors.New(tt.errMsg))
+				}
 			} else {
 				mockOpenAI.On("CreateChatCompletion", mock.Anything, mock.Anything).Return(mockResponse, nil)
 				mockRepo.On("Create", mock.Anything, mock.Anything).Return(nil)
@@ -142,10 +162,17 @@ func TestCreateCopy(t *testing.T) {
 			// アサーション
 			if tt.wantErr {
 				assert.Error(t, err)
+				if tt.errMsg != "" {
+					assert.Contains(t, err.Error(), tt.errMsg)
+				}
 				return
 			}
 			assert.NoError(t, err)
 			assert.Equal(t, tt.want, got)
+
+			// モックの呼び出しを検証
+			mockOpenAI.AssertExpectations(t)
+			mockRepo.AssertExpectations(t)
 		})
 	}
 }
