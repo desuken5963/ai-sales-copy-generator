@@ -11,11 +11,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 
 	"github.com/takanoakira/ai-sales-copy-generator/backend/internal/domain/entity"
 )
 
-func setupTestDB(t *testing.T) (*gorm.DB, sqlmock.Sqlmock, error) {
+func setupTestDB() (*gorm.DB, sqlmock.Sqlmock, error) {
 	// SQLMockの作成
 	sqlDB, mock, err := sqlmock.New()
 	if err != nil {
@@ -28,7 +29,10 @@ func setupTestDB(t *testing.T) (*gorm.DB, sqlmock.Sqlmock, error) {
 		SkipInitializeWithVersion: true,
 	})
 
-	db, err := gorm.Open(dialector, &gorm.Config{})
+	// ログを無効化する設定
+	db, err := gorm.Open(dialector, &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -72,7 +76,7 @@ func TestCreate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// テスト用DBのセットアップ
-			db, mock, err := setupTestDB(t)
+			db, mock, err := setupTestDB()
 			assert.NoError(t, err)
 
 			// SQLクエリのモック
@@ -148,7 +152,7 @@ func TestGet(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// テスト用DBのセットアップ
-			db, mock, err := setupTestDB(t)
+			db, mock, err := setupTestDB()
 			assert.NoError(t, err)
 
 			// SQLクエリのモック
@@ -249,7 +253,7 @@ func TestGetPublished(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// テスト用DBのセットアップ
-			db, mock, err := setupTestDB(t)
+			db, mock, err := setupTestDB()
 			assert.NoError(t, err)
 
 			// SQLクエリのモック
@@ -324,7 +328,7 @@ func TestUpdateLikes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// テスト用DBのセットアップ
-			db, mock, err := setupTestDB(t)
+			db, mock, err := setupTestDB()
 			assert.NoError(t, err)
 
 			// SQLクエリのモック
