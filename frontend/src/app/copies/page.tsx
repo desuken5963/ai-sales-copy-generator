@@ -120,10 +120,10 @@ export default function CopiesPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-primary">公開済み販促コピー</h1>
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8">
+          <h1 className="text-3xl font-bold text-primary mb-4 md:mb-0">公開済み販促コピー</h1>
           <Link href="/copy/new">
-            <Button variant="primary">新規作成</Button>
+            <Button variant="primary" className="w-full md:w-auto">新規作成</Button>
           </Link>
         </div>
 
