@@ -81,7 +81,7 @@ func (h *handler) GetCopy(c *gin.Context) {
 func (h *handler) GetPublishedCopies(c *gin.Context) {
 	copies, err := h.usecase.GetPublishedCopies(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 
@@ -97,7 +97,11 @@ func (h *handler) UpdateLikes(c *gin.Context) {
 
 	copy, err := h.usecase.UpdateLikes(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if err.Error() == "not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "copy not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 

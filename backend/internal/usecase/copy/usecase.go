@@ -20,7 +20,12 @@ type UseCase interface {
 }
 
 type useCase struct {
-	repo repository.CopyRepository
+	repo         repository.CopyRepository
+	openaiClient openAIClient
+}
+
+type openAIClient interface {
+	CreateChatCompletion(ctx context.Context, req openai.ChatCompletionRequest) (openai.ChatCompletionResponse, error)
 }
 
 type CreateCopyInput struct {
@@ -38,18 +43,18 @@ type openAIResponse struct {
 }
 
 func NewUseCase(repo repository.CopyRepository) UseCase {
-	return &useCase{repo: repo}
+	return &useCase{
+		repo:         repo,
+		openaiClient: openai.NewClient(os.Getenv("OPENAI_API_KEY")),
+	}
 }
 
 func (u *useCase) CreateCopy(ctx context.Context, input CreateCopyInput) (*entity.Copy, error) {
-	// OpenAIクライアントの初期化
-	client := openai.NewClient(os.Getenv("OPENAI_API_KEY"))
-
 	// プロンプトの生成
 	prompt := generatePrompt(input)
 
 	// OpenAI APIの呼び出し
-	resp, err := client.CreateChatCompletion(
+	resp, err := u.openaiClient.CreateChatCompletion(
 		ctx,
 		openai.ChatCompletionRequest{
 			Model: openai.GPT3Dot5Turbo,
