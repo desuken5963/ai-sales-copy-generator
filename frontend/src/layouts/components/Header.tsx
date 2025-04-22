@@ -67,11 +67,10 @@ export const Header = () => {
           </div>
 
           {/* ナビゲーション */}
-          <div className="hidden md:block w-full md:w-auto">
+          <div className={`${isMenuOpen ? 'block' : 'hidden'} md:block w-full md:w-auto pb-4 md:pb-0`}>
             <nav
               className={`
                 ${isMounted ? 'transition-all duration-300 ease-in-out' : ''}
-                ${!isMenuOpen && 'hidden md:block'}
                 overflow-hidden
                 md:flex md:items-center
               `}
