@@ -43,6 +43,9 @@ go.work.sum
 # testing
 /coverage
 /frontend/coverage
+/frontend/playwright-report/
+/frontend/test-results/
+/frontend/playwright/.cache/
 
 # next.js
 /.next/
