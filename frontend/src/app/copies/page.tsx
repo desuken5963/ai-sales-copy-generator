@@ -39,7 +39,10 @@ export default function CopiesPage() {
     const fetchCopies = async () => {
       try {
         const response = await getCopies();
-        setCopies(response || []);
+        const sortedCopies = (response || []).sort((a, b) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        setCopies(sortedCopies);
       } catch (err) {
         setError('コピーの取得に失敗しました');
         console.error(err);
