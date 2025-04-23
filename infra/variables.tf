@@ -85,4 +85,10 @@ variable "aws_region" {
   description = "AWSリージョン"
   type        = string
   default     = "ap-northeast-1"
+}
+
+variable "backend_project_name" {
+  description = "バックエンドプロジェクト名"
+  type        = string
+  default     = "ai-sales-copy-generator-api"
 } 

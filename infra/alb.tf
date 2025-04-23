@@ -1,7 +1,7 @@
 # セキュリティグループ（ALB用）
 resource "aws_security_group" "alb" {
-  name        = "${var.environment}-alb-sg"
-  description = "ALB Security Group"
+  name        = "${var.backend_project_name}-alb"
+  description = "Security group for ALB"
   vpc_id      = aws_vpc.main.id
 
   ingress {
@@ -28,14 +28,14 @@ resource "aws_security_group" "alb" {
   tags = merge(
     local.common_tags,
     {
-      Name = "${var.environment}-alb-sg"
+      Name = "${var.backend_project_name}-alb-sg"
     }
   )
 }
 
 # ALB
 resource "aws_lb" "main" {
-  name               = "${var.environment}-alb"
+  name               = "${var.backend_project_name}-alb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
@@ -46,14 +46,14 @@ resource "aws_lb" "main" {
   tags = merge(
     local.common_tags,
     {
-      Name = "${var.environment}-alb"
+      Name = "${var.backend_project_name}-alb"
     }
   )
 }
 
 # ターゲットグループ
 resource "aws_lb_target_group" "main" {
-  name        = "${var.environment}-tg"
+  name        = "${var.backend_project_name}-tg"
   port        = 8080
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
@@ -74,7 +74,7 @@ resource "aws_lb_target_group" "main" {
   tags = merge(
     local.common_tags,
     {
-      Name = "${var.environment}-tg"
+      Name = "${var.backend_project_name}-tg"
     }
   )
 }
@@ -87,7 +87,7 @@ resource "aws_acm_certificate" "main" {
   tags = merge(
     local.common_tags,
     {
-      Name = "${var.environment}-cert"
+      Name = "${var.backend_project_name}-cert"
     }
   )
 

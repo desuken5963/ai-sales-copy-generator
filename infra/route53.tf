@@ -1,16 +1,3 @@
-# ドメインの登録（最初に実行）
-resource "aws_route53domains_registered_domain" "main" {
-  domain_name = var.domain_registration.domain_name
-  auto_renew = true
-
-  tags = merge(
-    local.common_tags,
-    {
-      Name = "${var.environment}-domain"
-    }
-  )
-}
-
 # Route 53ホストゾーン
 resource "aws_route53_zone" "main" {
   name = var.domain_registration.domain_name

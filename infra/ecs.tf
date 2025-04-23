@@ -1,6 +1,6 @@
 # ECSクラスター
 resource "aws_ecs_cluster" "main" {
-  name = "${var.environment}-cluster"
+  name = var.backend_project_name
 
   setting {
     name  = "containerInsights"
@@ -10,14 +10,14 @@ resource "aws_ecs_cluster" "main" {
   tags = merge(
     local.common_tags,
     {
-      Name = "${var.environment}-cluster"
+      Name = var.backend_project_name
     }
   )
 }
 
 # セキュリティグループ（ECSタスク用）
 resource "aws_security_group" "ecs_tasks" {
-  name        = "${var.environment}-ecs-tasks-sg"
+  name        = "${var.backend_project_name}-ecs-tasks-sg"
   description = "ECS Tasks Security Group"
   vpc_id      = aws_vpc.main.id
 
@@ -38,14 +38,14 @@ resource "aws_security_group" "ecs_tasks" {
   tags = merge(
     local.common_tags,
     {
-      Name = "${var.environment}-ecs-tasks-sg"
+      Name = "${var.backend_project_name}-ecs-tasks-sg"
     }
   )
 }
 
-# ECRリポジトリ（ダミー）
+# ECRリポジトリ
 resource "aws_ecr_repository" "main" {
-  name = "${var.environment}-api"
+  name = "${var.backend_project_name}-api"
   force_delete = true
 
   image_scanning_configuration {
@@ -55,14 +55,14 @@ resource "aws_ecr_repository" "main" {
   tags = merge(
     local.common_tags,
     {
-      Name = "${var.environment}-ecr"
+      Name = "${var.backend_project_name}-ecr"
     }
   )
 }
 
 # タスク定義
 resource "aws_ecs_task_definition" "main" {
-  family                   = "${var.environment}-api"
+  family                   = "${var.backend_project_name}-api"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
@@ -134,14 +134,14 @@ resource "aws_ecs_task_definition" "main" {
   tags = merge(
     local.common_tags,
     {
-      Name = "${var.environment}-task-definition"
+      Name = "${var.backend_project_name}-task-definition"
     }
   )
 }
 
 # ECSサービス
 resource "aws_ecs_service" "main" {
-  name            = "${var.environment}-api"
+  name            = "${var.backend_project_name}-api"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.main.arn
   desired_count   = 2
@@ -164,27 +164,27 @@ resource "aws_ecs_service" "main" {
   tags = merge(
     local.common_tags,
     {
-      Name = "${var.environment}-service"
+      Name = "${var.backend_project_name}-service"
     }
   )
 }
 
 # CloudWatch Logsグループ
 resource "aws_cloudwatch_log_group" "main" {
-  name              = "/ecs/${var.environment}-api"
+  name              = "/ecs/${var.backend_project_name}-api"
   retention_in_days = 30
 
   tags = merge(
     local.common_tags,
     {
-      Name = "${var.environment}-logs"
+      Name = "${var.backend_project_name}-logs"
     }
   )
 }
 
 # IAMロール（タスク実行用）
 resource "aws_iam_role" "ecs_task_execution_role" {
-  name = "${var.environment}-ecs-task-execution-role"
+  name = "${var.backend_project_name}-ecs-task-execution-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -202,7 +202,7 @@ resource "aws_iam_role" "ecs_task_execution_role" {
   tags = merge(
     local.common_tags,
     {
-      Name = "${var.environment}-ecs-task-execution-role"
+      Name = "${var.backend_project_name}-ecs-task-execution-role"
     }
   )
 }
@@ -214,7 +214,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
 
 # IAMロール（タスク用）
 resource "aws_iam_role" "ecs_task_role" {
-  name = "${var.environment}-ecs-task-role"
+  name = "${var.backend_project_name}-ecs-task-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -232,7 +232,7 @@ resource "aws_iam_role" "ecs_task_role" {
   tags = merge(
     local.common_tags,
     {
-      Name = "${var.environment}-ecs-task-role"
+      Name = "${var.backend_project_name}-ecs-task-role"
     }
   )
 } 
