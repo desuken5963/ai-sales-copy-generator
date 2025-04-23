@@ -80,3 +80,24 @@ next-env.d.ts
 # swc
 .swc/
 /frontend/.swc/
+
+# Terraform関連
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+.terraform.lock.hcl
+
+# 環境変数
+.env
+.env.*
+
+# エディタ関連
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS関連
+.DS_Store
+Thumbs.db
