@@ -84,8 +84,24 @@ resource "aws_ecs_task_definition" "main" {
       ]
       environment = [
         {
+          name  = "DATABASE_URL"
+          value = "mysql://${var.db_username}:${var.db_password}@${aws_rds_cluster.main.endpoint}:${var.db_port}/${var.db_name}"
+        },
+        {
           name  = "ENVIRONMENT"
           value = var.environment
+        },
+        {
+          name  = "PORT"
+          value = "8080"
+        },
+        {
+          name  = "DB_USER"
+          value = var.db_username
+        },
+        {
+          name  = "DB_PASSWORD"
+          value = var.db_password
         },
         {
           name  = "DB_HOST"
@@ -93,26 +109,22 @@ resource "aws_ecs_task_definition" "main" {
         },
         {
           name  = "DB_PORT"
-          value = "3306"
+          value = var.db_port
         },
         {
           name  = "DB_NAME"
-          value = aws_rds_cluster.main.database_name
+          value = var.db_name
         },
         {
-          name  = "DB_USER"
-          value = aws_rds_cluster.main.master_username
-        },
-        {
-          name  = "DB_PASSWORD"
-          value = aws_rds_cluster.main.master_password
+          name  = "OPENAI_API_KEY"
+          value = var.openai_api_key
         }
       ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
           awslogs-group         = aws_cloudwatch_log_group.main.name
-          awslogs-region        = "ap-northeast-1"
+          awslogs-region        = var.aws_region
           awslogs-stream-prefix = "ecs"
         }
       }

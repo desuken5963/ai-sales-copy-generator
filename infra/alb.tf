@@ -94,6 +94,21 @@ resource "aws_acm_certificate" "main" {
   lifecycle {
     create_before_destroy = true
   }
+
+  depends_on = [
+    aws_route53_zone.main
+  ]
+}
+
+# ACM証明書の検証完了を待機
+resource "aws_acm_certificate_validation" "main" {
+  certificate_arn         = aws_acm_certificate.main.arn
+  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
+
+  depends_on = [
+    aws_route53_zone.main,
+    aws_route53_record.cert_validation
+  ]
 }
 
 # HTTPSリスナー
@@ -102,7 +117,7 @@ resource "aws_lb_listener" "https" {
   port              = "443"
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-2016-08"
-  certificate_arn   = aws_acm_certificate.main.arn
+  certificate_arn   = aws_acm_certificate_validation.main.certificate_arn
 
   default_action {
     type             = "forward"
