@@ -3,7 +3,11 @@ const nextConfig = {
   reactStrictMode: true,
   experimental: {
     serverActions: {
-      allowedOrigins: ['localhost:3000'],
+      allowedOrigins: [
+        'localhost:3000',
+        'api.ai-sales-copy-generator.click',
+        'ai-sales-copy-generator.click'
+      ],
     },
   },
   eslint: {
