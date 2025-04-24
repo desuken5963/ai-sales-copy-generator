@@ -120,6 +120,13 @@ resource "aws_ecs_task_definition" "main" {
           value = var.openai_api_key
         }
       ]
+      healthCheck = {
+        command     = ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+        interval    = 30
+        timeout     = 5
+        retries     = 3
+        startPeriod = 60
+      }
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -147,6 +154,10 @@ resource "aws_ecs_service" "main" {
   desired_count   = 2
   launch_type     = "FARGATE"
 
+  deployment_controller {
+    type = "ECS"
+  }
+
   network_configuration {
     subnets          = aws_subnet.private[*].id
     security_groups  = [aws_security_group.ecs_tasks.id]
@@ -159,7 +170,12 @@ resource "aws_ecs_service" "main" {
     container_port   = 8080
   }
 
-  depends_on = [aws_lb_listener.https]
+  depends_on = [
+    aws_lb_listener.https,
+    aws_iam_role_policy_attachment.ecs_task_execution_role_policy,
+    aws_rds_cluster_instance.writer,
+    aws_rds_cluster_instance.reader
+  ]
 
   tags = merge(
     local.common_tags,
