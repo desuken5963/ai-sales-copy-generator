@@ -53,4 +53,13 @@ resource "aws_route53_record" "alb" {
     zone_id                = aws_lb.main.zone_id
     evaluate_target_health = true
   }
+}
+
+# Vercelのドメイン検証用DNSレコード
+resource "aws_route53_record" "vercel" {
+  zone_id = aws_route53_zone.main.id
+  name    = var.domain_registration.domain_name
+  type    = "A"
+  ttl     = 60
+  records = ["76.76.21.21"]
 } 

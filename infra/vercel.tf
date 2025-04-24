@@ -9,9 +9,12 @@ resource "vercel_project" "main" {
   root_directory = "frontend"
   build_command = "npm run build"
   output_directory = ".next"
-  vercel_authentication = {
-    protect_production = false
-  }
+}
+
+# カスタムドメインの設定
+resource "vercel_project_domain" "main" {
+  project_id = vercel_project.main.id
+  domain     = var.domain_registration.domain_name
 }
 
 # 既存のデータソースを削除し、新しいリソースを参照するように変更
@@ -19,7 +22,7 @@ resource "vercel_project_environment_variable" "api_base_url" {
   project_id = vercel_project.main.id
   key        = "NEXT_PUBLIC_API_BASE_URL"
   value      = "https://${var.domain_name}/api/v1"
-  target     = ["production", "preview", "development"]
+  target     = ["production"]
 
   depends_on = [
     aws_lb.main,
@@ -31,7 +34,7 @@ resource "vercel_project_environment_variable" "environment" {
   project_id = vercel_project.main.id
   key        = "NEXT_PUBLIC_ENVIRONMENT"
   value      = var.environment
-  target     = ["production", "preview", "development"]
+  target     = ["production"]
 
   depends_on = [
     aws_lb.main,
