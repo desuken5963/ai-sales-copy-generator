@@ -92,7 +92,7 @@ resource "aws_rds_cluster" "main" {
 # Auroraインスタンス（Writer）
 resource "aws_rds_cluster_instance" "writer" {
   cluster_identifier = aws_rds_cluster.main.id
-  instance_class    = "db.t3.medium"
+  instance_class    = "db.t4g.medium"
   engine            = aws_rds_cluster.main.engine
   engine_version    = aws_rds_cluster.main.engine_version
   identifier        = "${var.environment}-aurora-writer"

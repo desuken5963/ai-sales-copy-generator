@@ -16,6 +16,12 @@ provider "aws" {
   region = "ap-northeast-1"
 }
 
+# Route53 Domainsサービス用のプロバイダー（us-east-1必須）
+provider "aws" {
+  alias  = "us-east-1"
+  region = "us-east-1"
+}
+
 provider "vercel" {
   api_token = var.vercel_api_token
 }
