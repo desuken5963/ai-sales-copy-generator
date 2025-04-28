@@ -24,6 +24,8 @@ jobs:
           install: true
 
       - name: Set up containers
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           docker compose --profile frontend-test up -d
           docker compose --profile frontend-test run --rm frontend-test sh -c "npx playwright install --with-deps"
