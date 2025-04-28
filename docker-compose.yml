@@ -47,6 +47,8 @@ services:
     profiles:
       - backend-test
       - frontend-test
+    tty: true
+    stdin_open: true
 
   frontend-test:
     build:
@@ -59,6 +61,7 @@ services:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_BASE_URL=http://api-test:8080
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
     depends_on:
       api-test:
         condition: service_healthy

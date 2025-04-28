@@ -29,6 +29,9 @@ jobs:
           # テスト環境の構築
           docker compose --profile frontend-test up -d
           
+          # APIサーバーのログを表示
+          docker compose --profile frontend-test logs api-test
+          
           # ユニットテストの実行
           docker compose --profile frontend-test run --rm -e OPENAI_API_KEY=$OPENAI_API_KEY frontend-test npm run test:unit
           
