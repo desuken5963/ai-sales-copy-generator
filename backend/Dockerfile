@@ -2,11 +2,11 @@
 FROM golang:1.21 as base
 WORKDIR /api
 RUN apt-get update && apt-get install -y default-mysql-client
+RUN go install -tags 'mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.16.2
 
 # 開発環境
 FROM base as development
 RUN go install github.com/cosmtrek/air@v1.49.0
-RUN go install -tags 'mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.16.2
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
@@ -16,13 +16,13 @@ CMD ["air", "-c", ".air.toml"]
 
 # テスト環境
 FROM base as test
+ARG MAIN_PATH=cmd/test/main.go
+WORKDIR /api
 COPY go.mod go.sum ./
 RUN go mod download
-RUN go install -tags 'mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.16.2
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/api
-EXPOSE 8080
-CMD ["./main"]
+RUN CGO_ENABLED=0 GOOS=linux go build -o main ${MAIN_PATH}
+CMD ["sh", "-c", "migrate -database 'mysql://test_user:test_pass@tcp(test-db:3306)/test_db' -path migrations up && ./main"]
 
 # ビルド環境
 FROM base as builder
