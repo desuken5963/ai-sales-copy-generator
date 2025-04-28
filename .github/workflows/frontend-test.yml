@@ -23,8 +23,8 @@ jobs:
           version: latest
           install: true
 
-      - name: Create .env file
-        run: echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
+      # - name: Create .env file
+      #   run: echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
 
       - name: Set up containers
         run: |
@@ -33,7 +33,7 @@ jobs:
 
       - name: Run frontend tests
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          # OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           DEBUG: 'true'
         run: |
           docker compose --profile frontend-test run --rm -e OPENAI_API_KEY=$OPENAI_API_KEY -e DEBUG=true frontend-test sh -c "npm run test:unit && npm run test:e2e"
