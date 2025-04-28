@@ -44,7 +44,8 @@ services:
     networks:
       - test-network
     profiles:
-      - test
+      - backend-test
+      - frontend-test
 
   frontend-test:
     build:
@@ -63,7 +64,7 @@ services:
     networks:
       - test-network
     profiles:
-      - test
+      - frontend-test
 
   db:
     image: mysql:8.0
@@ -96,14 +97,16 @@ services:
       MYSQL_USER: test_user
       MYSQL_PASSWORD: test_pass
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "test_user", "-ptest_pass" ]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
     networks:
       - test-network
     profiles:
-      - test
+      - backend-test
+      - frontend-test
 
 volumes:
   mysql_data:
