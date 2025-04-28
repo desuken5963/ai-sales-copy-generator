@@ -27,5 +27,5 @@ COPY . .
 # 開発サーバーを起動
 EXPOSE 3000
 
-# テストの実行
-CMD ["npm", "test", "--", "--watchAll=false"] 
+# ユニットテストとE2Eテストを実行
+CMD ["sh", "-c", "npm run test:unit && npm run test:e2e"] 
