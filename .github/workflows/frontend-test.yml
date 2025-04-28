@@ -24,7 +24,9 @@ jobs:
           install: true
 
       - name: Create .env file
-        run: echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
+        run: |
+          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
+          cat .env 
 
       - name: Set up containers
         run: |
