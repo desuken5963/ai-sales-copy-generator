@@ -40,6 +40,24 @@ services:
     profiles:
       - test
 
+  frontend-test:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://api-test:8080
+    depends_on:
+      - api-test
+    networks:
+      - test-network
+    profiles:
+      - test
+
   db:
     image: mysql:8.0
     platform: linux/amd64

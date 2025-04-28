@@ -10,10 +10,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: ./frontend
-
     steps:
       - uses: actions/checkout@v4
 
@@ -26,47 +22,17 @@ jobs:
           version: latest
           install: true
 
-      - name: Start backend services
+      - name: Start services
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: docker compose --profile test up -d
+        run: |
+          docker compose --profile test up -d
+          # バックエンドの起動を待機
+          sleep 10
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: './frontend/package-lock.json'
+      - name: Run frontend tests
+        run: docker compose run --rm frontend-test
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
-
-      - name: Run Jest tests
-        env:
-          NEXT_PUBLIC_API_BASE_URL: 'http://localhost:8080'
-        run: npm test -- --watchAll=false
-
-      - name: Run Playwright tests
-        env:
-          NEXT_PUBLIC_API_BASE_URL: 'http://localhost:8080'
-        run: npm run test:e2e
-
-      - name: Upload test results
+      - name: Stop services
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: |
-            frontend/coverage
-            frontend/playwright-report
-          retention-days: 7
-
-      - name: Stop backend services
-        if: always()
-        run: docker compose down
-
-      - name: Run lint
-        run: npm run lint 
+        run: docker compose --profile test down 
