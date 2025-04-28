@@ -30,7 +30,7 @@ jobs:
           docker compose --profile frontend-test up -d
           
           # ユニットテストの実行
-          docker compose --profile frontend-test run --rm frontend-test npm run test:unit
+          docker compose --profile frontend-test run --rm -e OPENAI_API_KEY=$OPENAI_API_KEY frontend-test npm run test:unit
           
           # E2Eテストの実行
-          docker compose --profile frontend-test run --rm frontend-test npm run test:e2e 
+          docker compose --profile frontend-test run --rm -e OPENAI_API_KEY=$OPENAI_API_KEY frontend-test npm run test:e2e 

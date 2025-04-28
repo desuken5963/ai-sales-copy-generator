@@ -30,4 +30,4 @@ jobs:
           docker compose --profile backend-test up -d
           
           # テストの実行
-          docker compose --profile backend-test run --rm api-test go test ./... -v 
+          docker compose --profile backend-test run --rm -e OPENAI_API_KEY=$OPENAI_API_KEY api-test go test ./... -v 
