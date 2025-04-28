@@ -15,8 +15,10 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: ${{ secrets.TEST_MYSQL_ROOT_PASSWORD }}
-          MYSQL_DATABASE: ${{ secrets.TEST_MYSQL_DATABASE }}
+          MYSQL_ROOT_PASSWORD: test_root_password
+          MYSQL_DATABASE: test_db
+          MYSQL_USER: test_user
+          MYSQL_PASSWORD: test_password
         ports:
           - 3306:3306
         options: >-
@@ -44,6 +46,7 @@ jobs:
           MYSQL_USER: ${{ secrets.TEST_MYSQL_USER }}
           MYSQL_PASSWORD: ${{ secrets.TEST_MYSQL_PASSWORD }}
           MYSQL_DATABASE: ${{ secrets.TEST_MYSQL_DATABASE }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.TEST_MYSQL_ROOT_PASSWORD }}
         run: |
           docker compose build api
           docker compose run --rm api go test ./... -v
