@@ -9,13 +9,14 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    environment: test
 
     services:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: test_db
+          MYSQL_ROOT_PASSWORD: ${{ secrets.TEST_MYSQL_ROOT_PASSWORD }}
+          MYSQL_DATABASE: ${{ secrets.TEST_MYSQL_DATABASE }}
         ports:
           - 3306:3306
         options: >-
@@ -37,15 +38,15 @@ jobs:
           install: true
 
       - name: Build and test
+        env:
+          MYSQL_HOST: ${{ secrets.TEST_MYSQL_HOST }}
+          MYSQL_PORT: ${{ secrets.TEST_MYSQL_PORT }}
+          MYSQL_USER: ${{ secrets.TEST_MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.TEST_MYSQL_PASSWORD }}
+          MYSQL_DATABASE: ${{ secrets.TEST_MYSQL_DATABASE }}
         run: |
           docker compose build api
-          docker compose run --rm \
-            -e MYSQL_HOST=mysql \
-            -e MYSQL_PORT=3306 \
-            -e MYSQL_USER=root \
-            -e MYSQL_PASSWORD=root \
-            -e MYSQL_DATABASE=test_db \
-            api go test ./... -v
+          docker compose run --rm api go test ./... -v
 
       - name: Run lint
         uses: golangci/golangci-lint-action@v3
