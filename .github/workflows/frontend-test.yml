@@ -26,6 +26,7 @@ jobs:
       - name: Run frontend tests
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          DEBUG: 'true'
         run: |
           # テスト環境の構築
           docker compose --profile frontend-test up -d
@@ -37,5 +38,12 @@ jobs:
           # テスト環境の準備
           docker compose --profile frontend-test run --rm frontend-test sh -c "npx playwright install --with-deps"
           
-          # テストの実行
-          docker compose --profile frontend-test run --rm -e OPENAI_API_KEY=$OPENAI_API_KEY frontend-test sh -c "npm run test:unit && npm run test:e2e" 
+          # テストの実行（デバッグログを有効化）
+          docker compose --profile frontend-test run --rm -e OPENAI_API_KEY=$OPENAI_API_KEY -e DEBUG=true frontend-test sh -c "npm run test:unit && npm run test:e2e"
+          
+          # コンテナのログを表示
+          echo "=== Frontend Test Container Logs ==="
+          docker compose logs frontend-test
+          
+          echo "=== API Test Container Logs ==="
+          docker compose logs api-test 
