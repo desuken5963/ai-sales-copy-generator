@@ -54,8 +54,8 @@ services:
       - frontend-test
     tty: true
     stdin_open: true
-    env_file:
-      - .env
+    # env_file:
+    #   - .env
 
   frontend-test:
     build:
