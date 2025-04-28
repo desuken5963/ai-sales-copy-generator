@@ -1,37 +1,37 @@
-FROM node:23.6.1-alpine
+FROM node:20.11.1-bullseye
 
 WORKDIR /app
 
 # Playwrightの依存関係をインストール
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y \
     chromium \
-    nss \
-    freetype \
-    freetype-dev \
-    harfbuzz \
+    libnss3 \
+    libfreetype6 \
+    libharfbuzz0b \
     ca-certificates \
-    ttf-freefont \
+    fonts-freefont-ttf \
     nodejs \
     bash \
     xvfb \
     dbus \
-    libstdc++ \
-    libgcc \
-    libx11 \
-    libxcomposite \
-    libxdamage \
-    libxext \
-    libxfixes \
-    libxrandr \
-    libxrender \
-    libxtst \
-    alsa-lib \
-    at-spi2-core \
-    cups-libs \
-    gtk+3.0 \
-    pango \
-    gdk-pixbuf \
-    cairo
+    libstdc++6 \
+    libgcc1 \
+    libx11-6 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxrandr2 \
+    libxrender1 \
+    libxtst6 \
+    libasound2 \
+    libatk1.0-0 \
+    libcups2 \
+    libgtk-3-0 \
+    libpango-1.0-0 \
+    libgdk-pixbuf2.0-0 \
+    libcairo2 \
+    && rm -rf /var/lib/apt/lists/*
 
 # 依存関係のインストール
 COPY package*.json ./
