@@ -17,6 +17,9 @@ RUN apk add --no-cache \
 COPY package*.json ./
 RUN npm ci
 
+# SWCとJestの依存関係をインストール
+RUN npm install -D @swc/core @swc/jest
+
 # Playwrightのブラウザをインストール
 ENV PLAYWRIGHT_BROWSERS_PATH=/app/pw-browsers
 RUN npx playwright install chromium
