@@ -1,34 +1,37 @@
-# Debian/Ubuntuベースのイメージを使用
-FROM golang:1.21
-
+# ベースイメージ
+FROM golang:1.21 as base
 WORKDIR /api
-
-# MySQLクライアントをインストール
 RUN apt-get update && apt-get install -y default-mysql-client
 
-# Go 1.21と互換性のあるairのバージョンをインストール
+# 開発環境
+FROM base as development
 RUN go install github.com/cosmtrek/air@v1.49.0
-
-# Go 1.21と互換性のあるgolang-migrateのバージョンをインストール
 RUN go install -tags 'mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.16.2
-
-# モジュールの初期化とパッケージの追加
-RUN go mod init api && \
-    go get gorm.io/gorm && \
-    go get gorm.io/driver/mysql && \
-    go get github.com/gin-gonic/gin
-
-# 依存関係のコピーとダウンロード
 COPY go.mod go.sum ./
 RUN go mod download
-
-# ソースコードのコピー
 COPY . .
-
-# airの設定ファイルをコピー
 COPY .air.toml .
-
 EXPOSE 8080
-
-# airを使用してホットリロードを有効化
 CMD ["air", "-c", ".air.toml"]
+
+# テスト環境
+FROM base as test
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+CMD ["go", "test", "./...", "-v"]
+
+# ビルド環境
+FROM base as builder
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/api
+
+# 本番環境
+FROM alpine:latest as production
+RUN apk --no-cache add ca-certificates
+WORKDIR /root/
+COPY --from=builder /api/main .
+EXPOSE 8080
+CMD ["./main"]

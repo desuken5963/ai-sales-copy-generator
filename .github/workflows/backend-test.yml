@@ -9,23 +9,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    environment: test
-
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: test_root_password
-          MYSQL_DATABASE: test_db
-          MYSQL_USER: test_user
-          MYSQL_PASSWORD: test_password
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
 
     steps:
       - uses: actions/checkout@v4
@@ -39,17 +22,8 @@ jobs:
           version: latest
           install: true
 
-      - name: Build and test
-        env:
-          MYSQL_HOST: ${{ secrets.TEST_MYSQL_HOST }}
-          MYSQL_PORT: ${{ secrets.TEST_MYSQL_PORT }}
-          MYSQL_USER: ${{ secrets.TEST_MYSQL_USER }}
-          MYSQL_PASSWORD: ${{ secrets.TEST_MYSQL_PASSWORD }}
-          MYSQL_DATABASE: ${{ secrets.TEST_MYSQL_DATABASE }}
-          MYSQL_ROOT_PASSWORD: ${{ secrets.TEST_MYSQL_ROOT_PASSWORD }}
-        run: |
-          docker compose build api
-          docker compose run --rm api go test ./... -v
+      - name: Run tests
+        run: docker compose run --rm api-test
 
       - name: Run lint
         uses: golangci/golangci-lint-action@v3
