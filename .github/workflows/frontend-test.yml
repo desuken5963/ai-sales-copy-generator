@@ -22,16 +22,11 @@ jobs:
           version: latest
           install: true
 
-      - name: Start services
+      - name: Run frontend tests
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          docker compose --profile test up -d
-          # バックエンドの起動を待機
-          sleep 10
-
-      - name: Run frontend tests
-        run: docker compose run --rm frontend-test
+          docker compose --profile test run --rm frontend-test
 
       - name: Stop services
         if: always()

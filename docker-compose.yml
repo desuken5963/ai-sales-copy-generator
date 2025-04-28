@@ -35,6 +35,12 @@ services:
       MYSQL_PASSWORD: test_pass
       MYSQL_DATABASE: test_db
       MYSQL_ROOT_PASSWORD: root
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - test-network
     profiles:
@@ -52,7 +58,8 @@ services:
     environment:
       - NEXT_PUBLIC_API_BASE_URL=http://api-test:8080
     depends_on:
-      - api-test
+      api-test:
+        condition: service_healthy
     networks:
       - test-network
     profiles:
