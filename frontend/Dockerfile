@@ -11,7 +11,27 @@ RUN apk add --no-cache \
     harfbuzz \
     ca-certificates \
     ttf-freefont \
-    nodejs
+    nodejs \
+    bash \
+    xvfb \
+    dbus \
+    libstdc++ \
+    libgcc \
+    libx11 \
+    libxcomposite \
+    libxdamage \
+    libxext \
+    libxfixes \
+    libxrandr \
+    libxrender \
+    libxtst \
+    alsa-lib \
+    atk \
+    cups-libs \
+    gtk+3.0 \
+    pango \
+    gdk-pixbuf \
+    cairo
 
 # 依存関係のインストール
 COPY package*.json ./
@@ -19,7 +39,7 @@ RUN npm install
 
 # Playwrightのブラウザをインストール
 ENV PLAYWRIGHT_BROWSERS_PATH=/app/pw-browsers
-RUN npx playwright install chromium
+RUN npx playwright install --with-deps chromium firefox webkit
 
 # アプリケーションのコピー
 COPY . .
