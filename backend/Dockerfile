@@ -21,7 +21,7 @@ WORKDIR /api
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o main ${MAIN_PATH}
+RUN go build -o main ${MAIN_PATH}
 CMD ["sh", "-c", "migrate -database 'mysql://test_user:test_pass@tcp(test-db:3306)/test_db' -path migrations up && ./main"]
 
 # ビルド環境
@@ -29,7 +29,7 @@ FROM base as builder
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/api
+RUN go build -o main ./cmd/api
 
 # 本番環境
 FROM alpine:latest as production
