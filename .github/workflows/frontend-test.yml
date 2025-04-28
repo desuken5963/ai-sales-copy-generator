@@ -26,8 +26,11 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          docker compose --profile test run --rm frontend-test
-
-      - name: Stop services
-        if: always()
-        run: docker compose --profile test down 
+          # テスト環境の構築
+          docker compose --profile test up -d
+          
+          # ユニットテストの実行
+          docker compose --profile test run --rm frontend-test npm run test:unit
+          
+          # E2Eテストの実行
+          docker compose --profile test run --rm frontend-test npm run test:e2e 

@@ -19,7 +19,8 @@ FROM base as test
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-CMD ["go", "test", "./...", "-v"]
+EXPOSE 8080
+CMD ["go", "run", "cmd/api/main.go"]
 
 # ビルド環境
 FROM base as builder
