@@ -38,9 +38,12 @@ services:
       - TEST_MYSQL_USER=test_user
       - TEST_MYSQL_PASSWORD=test_pass
       - TEST_MYSQL_DATABASE=test_db
+      - GIN_MODE=debug
     command: >
       sh -c "
+        echo 'Starting migrations...' &&
         migrate -database 'mysql://test_user:test_pass@tcp(test-db:3306)/test_db' -path migrations up &&
+        echo 'Migrations completed. Starting server...' &&
         ./main
       "
     networks:
