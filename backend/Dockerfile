@@ -18,6 +18,7 @@ CMD ["air", "-c", ".air.toml"]
 FROM base as test
 COPY go.mod go.sum ./
 RUN go mod download
+RUN go install -tags 'mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.16.2
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/api
 EXPOSE 8080
