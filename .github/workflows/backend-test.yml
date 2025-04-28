@@ -25,4 +25,9 @@ jobs:
       - name: Run tests
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: docker compose run -e OPENAI_API_KEY=$OPENAI_API_KEY --rm api-test 
+        run: |
+          # テスト環境の構築
+          docker compose --profile test up -d
+          
+          # テストの実行
+          docker compose --profile test run --rm api-test go test ./... -v 
