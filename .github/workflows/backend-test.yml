@@ -23,7 +23,9 @@ jobs:
           install: true
 
       - name: Run tests
-        run: docker compose run --rm api-test
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: docker compose run -e OPENAI_API_KEY=$OPENAI_API_KEY --rm api-test
 
       - name: Run lint
         uses: golangci/golangci-lint-action@v3
