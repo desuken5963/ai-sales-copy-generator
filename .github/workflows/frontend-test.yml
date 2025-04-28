@@ -29,4 +29,4 @@ jobs:
         run: |
           # テスト環境の構築とテストの実行
           docker compose --profile frontend-test up -d
-          docker compose --profile frontend-test run --rm -e OPENAI_API_KEY=$OPENAI_API_KEY frontend-test sh -c "npm run test:unit && npm run test:e2e" 
+          docker compose --profile frontend-test run --rm -e OPENAI_API_KEY=$OPENAI_API_KEY frontend-test sh -c "npx playwright install && npm run test:unit && npm run test:e2e" 
