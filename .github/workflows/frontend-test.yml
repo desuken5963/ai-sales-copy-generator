@@ -17,6 +17,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          version: latest
+          install: true
+
+      - name: Start backend services
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: docker compose --profile test up -d
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -27,18 +41,32 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Jest tests
         env:
-          VITE_API_BASE_URL: 'http://localhost:8080'
+          NEXT_PUBLIC_API_BASE_URL: 'http://localhost:8080'
         run: npm test -- --watchAll=false
+
+      - name: Run Playwright tests
+        env:
+          NEXT_PUBLIC_API_BASE_URL: 'http://localhost:8080'
+        run: npm run test:e2e
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: frontend/coverage
+          path: |
+            frontend/coverage
+            frontend/playwright-report
           retention-days: 7
+
+      - name: Stop backend services
+        if: always()
+        run: docker compose down
 
       - name: Run lint
         run: npm run lint 
