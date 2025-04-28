@@ -23,11 +23,6 @@ jobs:
           version: latest
           install: true
 
-      # - name: Create .env file
-      #   run: |
-      #     echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
-      #     cat .env 
-
       - name: Set up containers
         run: |
           docker compose --profile frontend-test up -d
