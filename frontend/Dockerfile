@@ -15,10 +15,7 @@ RUN apk add --no-cache \
 
 # 依存関係のインストール
 COPY package*.json ./
-RUN npm ci
-
-# SWCとJestの依存関係をインストール
-RUN npm install -D @swc/core @swc/jest
+RUN npm install
 
 # Playwrightのブラウザをインストール
 ENV PLAYWRIGHT_BROWSERS_PATH=/app/pw-browsers
