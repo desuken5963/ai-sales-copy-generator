@@ -6,9 +6,10 @@ resource "vercel_project" "main" {
     type = "github"
     repo = var.github_repo
   }
-  root_directory = "frontend"
-  build_command = "npm run build"
-  output_directory = ".next"
+
+  root_directory    = "frontend"
+  build_command     = "npm run build"
+  output_directory  = ".next"
 }
 
 # カスタムドメインの設定
