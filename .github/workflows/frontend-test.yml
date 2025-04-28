@@ -28,6 +28,14 @@ jobs:
           docker compose --profile frontend-test up -d
           docker compose --profile frontend-test run --rm frontend-test sh -c "npx playwright install --with-deps"
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v3
+        with:
+          path: frontend/pw-browsers
+          key: ${{ runner.os }}-pw-browsers-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-pw-browsers-
+
       - name: Run frontend tests
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
