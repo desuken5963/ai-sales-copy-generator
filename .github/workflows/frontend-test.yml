@@ -23,11 +23,11 @@ jobs:
           version: latest
           install: true
 
+      - name: Create .env file
+        run: echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
+
       - name: Set up containers
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          export OPENAI_API_KEY=$OPENAI_API_KEY
           docker compose --profile frontend-test up -d
           docker compose --profile frontend-test run --rm frontend-test sh -c "npx playwright install --with-deps"
 
