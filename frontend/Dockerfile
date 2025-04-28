@@ -26,7 +26,7 @@ RUN apk add --no-cache \
     libxrender \
     libxtst \
     alsa-lib \
-    atk \
+    atk-dev \
     cups-libs \
     gtk+3.0 \
     pango \
