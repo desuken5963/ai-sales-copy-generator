@@ -2,8 +2,9 @@ name: Backend Deploy
 
 on:
   push:
-    paths:
-      - 'backend/**'
+  # push:
+  #   paths:
+  #     - 'backend/**'
   # workflow_run:
   #   workflows: ["Backend Tests"]
   #   types:

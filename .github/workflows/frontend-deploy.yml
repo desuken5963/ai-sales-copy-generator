@@ -2,8 +2,9 @@ name: Frontend Deploy
 
 on:
   push:
-    paths:
-      - 'frontend/**'
+  # push:
+  #   paths:
+  #     - 'frontend/**'
   # workflow_run:
   #   workflows: ["Frontend Tests"]
   #   types:
