@@ -1,20 +1,23 @@
 name: Backend Deploy
 
 on:
-  push:
-  # push:
-  #   paths:
-  #     - 'backend/**'
-  # workflow_run:
-  #   workflows: ["Backend Tests"]
-  #   types:
-  #     - completed
-  #   branches:
-  #     - main
+  pull_request:
+    paths:
+      - 'backend/**'
+    types:
+      - closed
+    branches:
+      - main
+  workflow_run:
+    workflows: ["Backend Tests"]
+    types:
+      - completed
+    branches:
+      - main
 
 jobs:
   deploy:
-    # if: ${{ github.event.workflow_run.conclusion == 'success' && github.ref == 'refs/heads/main' }}
+    if: ${{ github.event.pull_request.merged == true || (github.event.workflow_run.conclusion == 'success' && github.ref == 'refs/heads/main') }}
     runs-on: ubuntu-latest
     environment: Production
     env:
