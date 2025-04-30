@@ -120,8 +120,52 @@ resource "aws_lb_listener" "https" {
   certificate_arn   = aws_acm_certificate_validation.main.certificate_arn
 
   default_action {
+    type = "fixed-response"
+
+    fixed_response {
+      content_type = "text/plain"
+      status_code  = "200"
+      message_body = "OK"
+    }
+  }
+}
+
+# HTTPSリスナールール（CORS対応）
+resource "aws_lb_listener_rule" "https" {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 1
+
+  action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.main.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/api/v1/*"]
+    }
+  }
+}
+
+# OPTIONSメソッド用の固定レスポンス
+resource "aws_lb_listener_rule" "options" {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 2
+
+  action {
+    type = "fixed-response"
+
+    fixed_response {
+      content_type = "text/plain"
+      status_code  = "200"
+      message_body = "OK"
+    }
+  }
+
+  condition {
+    http_request_method {
+      values = ["OPTIONS"]
+    }
   }
 }
 

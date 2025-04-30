@@ -54,13 +54,14 @@ variable "frontend_project_name" {
 variable "db_username" {
   description = "RDSのユーザー名"
   type        = string
-  default     = "user"
+  default     = "admin"
 }
 
 variable "db_password" {
   description = "RDSのパスワード"
   type        = string
   sensitive   = true
+  default     = ""
 }
 
 variable "db_port" {
@@ -91,4 +92,10 @@ variable "backend_project_name" {
   description = "バックエンドプロジェクト名"
   type        = string
   default     = "ai-sales-copy-generator-api"
+}
+
+variable "cors_origin" {
+  description = "CORSの許可オリジン"
+  type        = string
+  default     = "https://ai-sales-copy-generator.click"
 } 

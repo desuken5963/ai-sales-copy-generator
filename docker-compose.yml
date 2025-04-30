@@ -3,6 +3,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: ${TARGET:-production}
     volumes:
       - ./backend:/api
       - ./mysql/my.cnf:/root/.my.cnf
@@ -12,9 +13,84 @@ services:
       db:
         condition: service_healthy
     env_file:
-      - backend/.env
+      - backend/.env.development
     networks:
       - app-network
+    profiles:
+      - development
+
+  api-production:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    volumes:
+      - ./backend:/api
+      - ./mysql/my.cnf:/root/.my.cnf
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
+    profiles:
+      - production
+
+  api-test:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: test
+      args:
+        - MAIN_PATH=cmd/test/main.go
+    ports:
+      - "8080:8080"
+    depends_on:
+      test-db:
+        condition: service_healthy
+    environment:
+      - TEST_MYSQL_HOST=test-db
+      - TEST_MYSQL_PORT=3306
+      - TEST_MYSQL_USER=test_user
+      - TEST_MYSQL_PASSWORD=test_pass
+      - TEST_MYSQL_DATABASE=test_db
+      - GIN_MODE=debug
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    command: >
+      sh -c "
+        echo 'Starting migrations...' &&
+        migrate -database 'mysql://test_user:test_pass@tcp(test-db:3306)/test_db' -path migrations up &&
+        echo 'Migrations completed. Starting server...' &&
+        ./main
+      "
+    networks:
+      - test-network
+    profiles:
+      - backend-test
+      - frontend-test
+    tty: true
+    stdin_open: true
+
+  frontend-test:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - ./frontend/pw-browsers:/app/pw-browsers
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://api-test:8080/api/v1
+    depends_on:
+      api-test:
+        condition: service_started
+    networks:
+      - test-network
+    profiles:
+      - frontend-test
 
   db:
     image: mysql:8.0
@@ -34,11 +110,35 @@ services:
       retries: 5
     networks:
       - app-network
+    profiles:
+      - production
+      - development
+
+  test-db:
+    image: mysql:8.0
+    platform: linux/amd64
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: test_db
+      MYSQL_USER: test_user
+      MYSQL_PASSWORD: test_pass
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "test_user", "-ptest_pass" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - test-network
+    profiles:
+      - backend-test
+      - frontend-test
 
 volumes:
   mysql_data:
 
-
 networks:
   app-network:
+    driver: bridge
+  test-network:
     driver: bridge

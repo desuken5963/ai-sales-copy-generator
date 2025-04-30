@@ -1,6 +1,6 @@
 # ECSクラスター
 resource "aws_ecs_cluster" "main" {
-  name = var.backend_project_name
+  name = "ai-sales-copy-generator"
 
   setting {
     name  = "containerInsights"
@@ -10,7 +10,7 @@ resource "aws_ecs_cluster" "main" {
   tags = merge(
     local.common_tags,
     {
-      Name = var.backend_project_name
+      Name = "ai-sales-copy-generator"
     }
   )
 }
@@ -26,6 +26,13 @@ resource "aws_security_group" "ecs_tasks" {
     to_port         = 8080
     protocol        = "tcp"
     security_groups = [aws_security_group.alb.id]
+  }
+
+  ingress {
+    from_port       = 3306
+    to_port         = 3306
+    protocol        = "tcp"
+    security_groups = [aws_security_group.rds.id]
   }
 
   egress {
@@ -45,7 +52,7 @@ resource "aws_security_group" "ecs_tasks" {
 
 # ECRリポジトリ
 resource "aws_ecr_repository" "main" {
-  name = "${var.backend_project_name}-api"
+  name = var.backend_project_name
   force_delete = true
 
   image_scanning_configuration {
@@ -62,7 +69,7 @@ resource "aws_ecr_repository" "main" {
 
 # タスク定義
 resource "aws_ecs_task_definition" "main" {
-  family                   = "${var.backend_project_name}-api"
+  family                   = var.backend_project_name
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
@@ -72,7 +79,7 @@ resource "aws_ecs_task_definition" "main" {
 
   container_definitions = jsonencode([
     {
-      name      = "api"
+      name      = "api-production"
       image     = "${aws_ecr_repository.main.repository_url}:latest"
       essential = true
       portMappings = [
@@ -84,8 +91,24 @@ resource "aws_ecs_task_definition" "main" {
       ]
       environment = [
         {
-          name  = "DATABASE_URL"
-          value = "mysql://${var.db_username}:${var.db_password}@${aws_rds_cluster.main.endpoint}:${var.db_port}/${var.db_name}"
+          name  = "MYSQL_USER"
+          value = var.db_username
+        },
+        {
+          name  = "MYSQL_PASSWORD"
+          value = var.db_password
+        },
+        {
+          name  = "MYSQL_DATABASE"
+          value = var.db_name
+        },
+        {
+          name  = "MYSQL_DB_HOST"
+          value = aws_rds_cluster.main.endpoint
+        },
+        {
+          name  = "MYSQL_DB_PORT"
+          value = var.db_port
         },
         {
           name  = "ENVIRONMENT"
@@ -96,28 +119,12 @@ resource "aws_ecs_task_definition" "main" {
           value = "8080"
         },
         {
-          name  = "DB_USER"
-          value = var.db_username
-        },
-        {
-          name  = "DB_PASSWORD"
-          value = var.db_password
-        },
-        {
-          name  = "DB_HOST"
-          value = aws_rds_cluster.main.endpoint
-        },
-        {
-          name  = "DB_PORT"
-          value = var.db_port
-        },
-        {
-          name  = "DB_NAME"
-          value = var.db_name
-        },
-        {
           name  = "OPENAI_API_KEY"
           value = var.openai_api_key
+        },
+        {
+          name  = "CORS_ORIGIN"
+          value = var.cors_origin
         }
       ]
       healthCheck = {
@@ -146,9 +153,66 @@ resource "aws_ecs_task_definition" "main" {
   )
 }
 
+# マイグレーション用タスク定義
+resource "aws_ecs_task_definition" "migration" {
+  family                   = "${var.backend_project_name}-migration"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 256
+  memory                   = 512
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  task_role_arn            = aws_iam_role.ecs_task_role.arn
+
+  container_definitions = jsonencode([
+    {
+      name      = "migration"
+      image     = "${aws_ecr_repository.main.repository_url}:latest"
+      essential = true
+      workingDirectory = "/api"
+      environment = [
+        {
+          name  = "MYSQL_USER"
+          value = var.db_username
+        },
+        {
+          name  = "MYSQL_PASSWORD"
+          value = var.db_password
+        },
+        {
+          name  = "MYSQL_DATABASE"
+          value = var.db_name
+        },
+        {
+          name  = "MYSQL_DB_HOST"
+          value = aws_rds_cluster.main.endpoint
+        },
+        {
+          name  = "MYSQL_DB_PORT"
+          value = tostring(var.db_port)
+        }
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.main.name
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "ecs-migration"
+        }
+      }
+    }
+  ])
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${var.backend_project_name}-migration-task-definition"
+    }
+  )
+}
+
 # ECSサービス
 resource "aws_ecs_service" "main" {
-  name            = "${var.backend_project_name}-api"
+  name            = "ai-sales-copy-generator-api"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.main.arn
   desired_count   = 2
@@ -166,7 +230,7 @@ resource "aws_ecs_service" "main" {
 
   load_balancer {
     target_group_arn = aws_lb_target_group.main.arn
-    container_name   = "api"
+    container_name   = "api-production"
     container_port   = 8080
   }
 
@@ -180,14 +244,14 @@ resource "aws_ecs_service" "main" {
   tags = merge(
     local.common_tags,
     {
-      Name = "${var.backend_project_name}-service"
+      Name = "ai-sales-copy-generator-api"
     }
   )
 }
 
 # CloudWatch Logsグループ
 resource "aws_cloudwatch_log_group" "main" {
-  name              = "/ecs/${var.backend_project_name}-api"
+  name              = "/ecs/${var.backend_project_name}"
   retention_in_days = 30
 
   tags = merge(
@@ -196,6 +260,69 @@ resource "aws_cloudwatch_log_group" "main" {
       Name = "${var.backend_project_name}-logs"
     }
   )
+}
+
+# SSMパラメータストアにCloudWatch Agent設定を保存
+resource "aws_ssm_parameter" "cloudwatch_agent_config" {
+  name  = "/${var.environment}/cloudwatch-agent/config"
+  type  = "String"
+  value = jsonencode({
+    logs = {
+      timezone = "Local"
+      metrics_collected = {
+        emf = {
+          timezone = "Asia/Tokyo"
+        }
+      }
+    }
+  })
+}
+
+# ECSタスク実行ロールにSSMパラメータ読み取り権限を追加
+resource "aws_iam_role_policy" "ecs_task_execution_ssm" {
+  name = "${var.backend_project_name}-ecs-task-execution-ssm"
+  role = aws_iam_role.ecs_task_execution_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameters",
+          "ssm:GetParameter"
+        ]
+        Resource = aws_ssm_parameter.cloudwatch_agent_config.arn
+      }
+    ]
+  })
+}
+
+# CloudWatch Logsのタイムゾーン設定
+resource "aws_cloudwatch_query_definition" "timezone" {
+  name = "${var.backend_project_name}-timezone"
+  log_group_names = [aws_cloudwatch_log_group.main.name]
+
+  query_string = <<EOF
+fields @timestamp
+| filter @type = "timezone"
+| display @timestamp, @message
+| sort @timestamp desc
+EOF
+}
+
+# ECSタスク定義のログ設定を更新
+resource "aws_cloudwatch_log_metric_filter" "timezone" {
+  name           = "${var.backend_project_name}-timezone"
+  pattern        = ""
+  log_group_name = aws_cloudwatch_log_group.main.name
+
+  metric_transformation {
+    name          = "TimezoneFilter"
+    namespace     = "ECS/${var.backend_project_name}"
+    value         = "1"
+    default_value = "0"
+  }
 }
 
 # IAMロール（タスク実行用）

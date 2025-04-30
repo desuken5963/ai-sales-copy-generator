@@ -1,0 +1,51 @@
+name: Frontend Tests
+
+on:
+  push:
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-test.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          version: latest
+          install: true
+
+      - name: Set up containers
+        run: |
+          docker compose --profile frontend-test up -d
+          docker compose --profile frontend-test run --rm frontend-test sh -c "npx playwright install --with-deps"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v3
+        with:
+          path: frontend/pw-browsers
+          key: ${{ runner.os }}-pw-browsers-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-pw-browsers-
+
+      - name: Run frontend tests
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          DEBUG: 'true'
+        run: |
+          docker compose --profile frontend-test run --rm -e OPENAI_API_KEY=$OPENAI_API_KEY -e DEBUG=true frontend-test sh -c "npm run test:unit && npm run test:e2e"
+
+      - name: Show frontend logs (always)
+        if: always()
+        run: docker compose logs frontend-test
+
+      - name: Show API logs (always)
+        if: always()
+        run: docker compose logs api-test 

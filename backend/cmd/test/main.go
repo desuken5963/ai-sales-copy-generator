@@ -17,25 +17,23 @@ import (
 )
 
 func main() {
-	// 環境変数の読み込み（開発環境のみ）
-	if os.Getenv("ENVIRONMENT") != "production" {
-		if err := godotenv.Load(); err != nil {
-			log.Println("Warning: .env file not found")
-		}
+	// 環境変数の読み込み
+	if err := godotenv.Load(); err != nil {
+		log.Println("Warning: .env file not found")
 	}
 
 	// データベース接続
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		os.Getenv("MYSQL_USER"),
-		os.Getenv("MYSQL_PASSWORD"),
-		os.Getenv("MYSQL_DB_HOST"),
-		os.Getenv("MYSQL_DB_PORT"),
-		os.Getenv("MYSQL_DATABASE"),
+		os.Getenv("TEST_MYSQL_USER"),
+		os.Getenv("TEST_MYSQL_PASSWORD"),
+		os.Getenv("TEST_MYSQL_HOST"),
+		os.Getenv("TEST_MYSQL_PORT"),
+		os.Getenv("TEST_MYSQL_DATABASE"),
 	)
 
 	// 環境変数が設定されていない場合はデフォルト値を使用
 	if dsn == "@tcp(:)/?charset=utf8mb4&parseTime=True&loc=Local" {
-		dsn = "user:password@tcp(db:3306)/ai_sales_copy?charset=utf8mb4&parseTime=True&loc=Local"
+		dsn = "test_user:test_pass@tcp(test-db:3306)/test_db?charset=utf8mb4&parseTime=True&loc=Local"
 	}
 
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
@@ -56,11 +54,7 @@ func main() {
 
 	// CORS設定
 	r.Use(func(c *gin.Context) {
-		origin := os.Getenv("CORS_ORIGIN")
-		if origin == "" {
-			origin = "*"
-		}
-		c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		if c.Request.Method == "OPTIONS" {
@@ -68,13 +62,6 @@ func main() {
 			return
 		}
 		c.Next()
-	})
-
-	// ヘルスチェックエンドポイント
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"status": "ok",
-		})
 	})
 
 	// ルートの設定

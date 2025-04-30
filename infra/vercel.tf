@@ -3,12 +3,17 @@ resource "vercel_project" "main" {
   name      = var.frontend_project_name
   framework = "nextjs"
   git_repository = {
-    type = "github"
-    repo = var.github_repo
+    type              = "github"
+    repo              = var.github_repo
+    production_branch = "main"
   }
-  root_directory = "frontend"
-  build_command = "npm run build"
-  output_directory = ".next"
+
+  root_directory    = "frontend"
+  build_command     = "npm run build"
+  output_directory  = ".next"
+
+  # 自動デプロイを無効化
+  ignore_command = "if [ $VERCEL_ENV != 'production' ]; then exit 0; else exit 1; fi"
 }
 
 # カスタムドメインの設定

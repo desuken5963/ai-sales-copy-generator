@@ -70,9 +70,9 @@ resource "aws_rds_cluster" "main" {
   cluster_identifier      = "${var.environment}-aurora-cluster"
   engine                 = "aurora-mysql"
   engine_version         = "8.0.mysql_aurora.3.04.0"
-  database_name          = "main"
-  master_username        = "admin"
-  master_password        = random_password.db_master_password.result
+  database_name          = var.db_name
+  master_username        = var.db_username
+  master_password        = var.db_password
   backup_retention_period = 7
   preferred_backup_window = "03:00-04:00"
   vpc_security_group_ids = [aws_security_group.rds.id]
