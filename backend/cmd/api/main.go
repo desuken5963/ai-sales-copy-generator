@@ -17,9 +17,11 @@ import (
 )
 
 func main() {
-	// 環境変数の読み込み
-	if err := godotenv.Load(); err != nil {
-		log.Println("Warning: .env file not found")
+	// 環境変数の読み込み（開発環境のみ）
+	if os.Getenv("ENVIRONMENT") != "production" {
+		if err := godotenv.Load(); err != nil {
+			log.Println("Warning: .env file not found")
+		}
 	}
 
 	// データベース接続
