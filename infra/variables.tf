@@ -91,4 +91,10 @@ variable "backend_project_name" {
   description = "バックエンドプロジェクト名"
   type        = string
   default     = "ai-sales-copy-generator-api"
+}
+
+variable "cors_origin" {
+  description = "CORSの許可オリジン"
+  type        = string
+  default     = "https://ai-sales-copy-generator.click"
 } 

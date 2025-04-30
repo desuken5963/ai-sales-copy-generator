@@ -28,6 +28,13 @@ resource "aws_security_group" "ecs_tasks" {
     security_groups = [aws_security_group.alb.id]
   }
 
+  ingress {
+    from_port       = 3306
+    to_port         = 3306
+    protocol        = "tcp"
+    security_groups = [aws_security_group.rds.id]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -117,7 +124,7 @@ resource "aws_ecs_task_definition" "main" {
         },
         {
           name  = "CORS_ORIGIN"
-          value = "https://${var.domain_name}"
+          value = var.cors_origin
         }
       ]
       healthCheck = {
