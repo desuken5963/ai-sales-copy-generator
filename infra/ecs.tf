@@ -45,7 +45,7 @@ resource "aws_security_group" "ecs_tasks" {
 
 # ECRリポジトリ
 resource "aws_ecr_repository" "main" {
-  name = "${var.backend_project_name}-api"
+  name = var.backend_project_name
   force_delete = true
 
   image_scanning_configuration {
