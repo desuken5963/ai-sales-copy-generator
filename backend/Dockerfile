@@ -29,11 +29,17 @@ FROM base as builder
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
+ENV CGO_ENABLED=0
+ENV GOOS=linux
+ENV GOARCH=amd64
 RUN go build -o main ./cmd/api
 
 # 本番環境
 FROM debian:bullseye-slim as production
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y ca-certificates tzdata && \
+    ln -sf /usr/share/zoneinfo/Asia/Tokyo /etc/localtime && \
+    echo "Asia/Tokyo" > /etc/timezone && \
+    rm -rf /var/lib/apt/lists/*
 WORKDIR /api
 COPY --from=builder /api/main ./main
 COPY --from=builder /api/migrations ./migrations
