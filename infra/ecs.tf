@@ -137,6 +137,7 @@ resource "aws_ecs_task_definition" "main" {
           awslogs-group         = aws_cloudwatch_log_group.main.name
           awslogs-region        = var.aws_region
           awslogs-stream-prefix = "ecs"
+          awslogs-timezone      = "Asia/Tokyo"
         }
       }
     }
@@ -200,6 +201,69 @@ resource "aws_cloudwatch_log_group" "main" {
       Name = "${var.backend_project_name}-logs"
     }
   )
+}
+
+# SSMパラメータストアにCloudWatch Agent設定を保存
+resource "aws_ssm_parameter" "cloudwatch_agent_config" {
+  name  = "/${var.environment}/cloudwatch-agent/config"
+  type  = "String"
+  value = jsonencode({
+    logs = {
+      timezone = "Local"
+      metrics_collected = {
+        emf = {
+          timezone = "Asia/Tokyo"
+        }
+      }
+    }
+  })
+}
+
+# ECSタスク実行ロールにSSMパラメータ読み取り権限を追加
+resource "aws_iam_role_policy" "ecs_task_execution_ssm" {
+  name = "${var.backend_project_name}-ecs-task-execution-ssm"
+  role = aws_iam_role.ecs_task_execution_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameters",
+          "ssm:GetParameter"
+        ]
+        Resource = aws_ssm_parameter.cloudwatch_agent_config.arn
+      }
+    ]
+  })
+}
+
+# CloudWatch Logsのタイムゾーン設定
+resource "aws_cloudwatch_query_definition" "timezone" {
+  name = "${var.backend_project_name}-timezone"
+  log_group_names = [aws_cloudwatch_log_group.main.name]
+
+  query_string = <<EOF
+fields @timestamp
+| filter @type = "timezone"
+| display @timestamp, @message
+| sort @timestamp desc
+EOF
+}
+
+# ECSタスク定義のログ設定を更新
+resource "aws_cloudwatch_log_metric_filter" "timezone" {
+  name           = "${var.backend_project_name}-timezone"
+  pattern        = ""
+  log_group_name = aws_cloudwatch_log_group.main.name
+
+  metric_transformation {
+    name          = "TimezoneFilter"
+    namespace     = "ECS/${var.backend_project_name}"
+    value         = "1"
+    default_value = "0"
+  }
 }
 
 # IAMロール（タスク実行用）
