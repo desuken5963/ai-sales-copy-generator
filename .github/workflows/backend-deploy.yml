@@ -64,14 +64,18 @@ jobs:
           ECR_REPOSITORY: ai-sales-copy-generator-api
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker run --rm \
-            -e MYSQL_USER=${{ secrets.MYSQL_USER }} \
-            -e MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }} \
-            -e MYSQL_DB_HOST=${{ secrets.MYSQL_DB_HOST }} \
-            -e MYSQL_DB_PORT=${{ secrets.MYSQL_DB_PORT }} \
-            -e MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }} \
-            $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
-            migrate -database "mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(${MYSQL_DB_HOST}:${MYSQL_DB_PORT})/${MYSQL_DATABASE}" -path migrations up
+          aws ecs run-task \
+            --cluster ai-sales-copy-generator \
+            --task-definition ai-sales-copy-generator-migration \
+            --network-configuration "awsvpcConfiguration={subnets=[subnet-0a1234567890abcdef],securityGroups=[sg-0a1234567890abcdef]}" \
+            --launch-type FARGATE \
+            --overrides '{"containerOverrides": [{"name": "migration", "command": ["migrate", "-database", "mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(${MYSQL_DB_HOST}:${MYSQL_DB_PORT})/${MYSQL_DATABASE}", "-path", "migrations", "up"]}]}'
+
+      - name: Wait for migration to complete
+        run: |
+          aws ecs wait tasks-stopped \
+            --cluster ai-sales-copy-generator \
+            --tasks $(aws ecs list-tasks --cluster ai-sales-copy-generator --family ai-sales-copy-generator-migration --desired-status RUNNING --query 'taskArns[0]' --output text)
 
       - name: Update ECS service
         run: |
