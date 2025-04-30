@@ -68,6 +68,13 @@ func main() {
 		c.Next()
 	})
 
+	// ヘルスチェックエンドポイント
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"status": "ok",
+		})
+	})
+
 	// ルートの設定
 	routes.SetupCopyRoutes(r, copyHandler)
 
