@@ -187,7 +187,7 @@ resource "aws_ecs_task_definition" "migration" {
         },
         {
           name  = "MYSQL_DB_PORT"
-          value = var.db_port
+          value = tostring(var.db_port)
         }
       ]
       logConfiguration = {

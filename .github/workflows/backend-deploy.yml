@@ -64,18 +64,45 @@ jobs:
           ECR_REPOSITORY: ai-sales-copy-generator-api
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          aws ecs run-task \
+          # タスクの実行
+          TASK_ARN=$(aws ecs run-task \
             --cluster ai-sales-copy-generator \
             --task-definition ai-sales-copy-generator-api-migration \
             --network-configuration "awsvpcConfiguration={subnets=[$(aws ec2 describe-subnets --filters "Name=tag:Name,Values=dev-private-subnet-1" --query 'Subnets[0].SubnetId' --output text)],securityGroups=[$(aws ec2 describe-security-groups --filters "Name=tag:Name,Values=dev-rds-sg" --query 'SecurityGroups[0].GroupId' --output text)]}" \
             --launch-type FARGATE \
-            --overrides '{"containerOverrides": [{"name": "migration", "command": ["migrate", "-database", "mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(${MYSQL_DB_HOST}:${MYSQL_DB_PORT})/${MYSQL_DATABASE}", "-path", "migrations", "up"]}]}'
+            --overrides "{\"containerOverrides\": [{\"name\": \"migration\", \"command\": [\"migrate\", \"-database\", \"mysql://$MYSQL_USER:$MYSQL_PASSWORD@tcp($MYSQL_DB_HOST:$MYSQL_DB_PORT)/$MYSQL_DATABASE\", \"-path\", \"migrations\", \"up\"]}]}" \
+            --query 'tasks[0].taskArn' \
+            --output text)
 
-      - name: Wait for migration to complete
-        run: |
+          echo "Waiting for migration task to complete..."
           aws ecs wait tasks-stopped \
             --cluster ai-sales-copy-generator \
-            --tasks $(aws ecs list-tasks --cluster ai-sales-copy-generator --family ai-sales-copy-generator-api-migration --desired-status RUNNING --query 'taskArns[0]' --output text)
+            --tasks $TASK_ARN
+
+          # タスクの終了ステータスを確認
+          EXIT_CODE=$(aws ecs describe-tasks \
+            --cluster ai-sales-copy-generator \
+            --tasks $TASK_ARN \
+            --query 'tasks[0].containers[0].exitCode' \
+            --output text)
+
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "Migration failed with exit code $EXIT_CODE"
+            # ログを取得して表示
+            aws logs get-log-events \
+              --log-group-name "/ecs/ai-sales-copy-generator-api" \
+              --log-stream-name $(aws logs describe-log-streams \
+                --log-group-name "/ecs/ai-sales-copy-generator-api" \
+                --log-stream-name-prefix "ecs-migration" \
+                --order-by LastEventTime \
+                --descending \
+                --limit 1 \
+                --query 'logStreams[0].logStreamName' \
+                --output text) \
+              --query 'events[*].message' \
+              --output text
+            exit 1
+          fi
 
       - name: Update ECS service
         run: |
