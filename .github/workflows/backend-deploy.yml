@@ -86,6 +86,13 @@ jobs:
             --query 'tasks[0].containers[0].exitCode' \
             --output text)
 
+          echo "Task details:"
+          aws ecs describe-tasks \
+            --cluster ai-sales-copy-generator \
+            --tasks $TASK_ARN \
+            --query 'tasks[0].{Status:lastStatus,StoppedReason:stoppedReason,Containers:containers[*].{Name:name,LastStatus:lastStatus,ExitCode:exitCode,Reason:reason}}' \
+            --output json
+
           if [ "$EXIT_CODE" != "0" ]; then
             echo "Migration failed with exit code $EXIT_CODE"
             exit 1
