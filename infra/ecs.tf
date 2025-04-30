@@ -153,6 +153,62 @@ resource "aws_ecs_task_definition" "main" {
   )
 }
 
+# マイグレーション用タスク定義
+resource "aws_ecs_task_definition" "migration" {
+  family                   = "${var.backend_project_name}-migration"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 256
+  memory                   = 512
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  task_role_arn            = aws_iam_role.ecs_task_role.arn
+
+  container_definitions = jsonencode([
+    {
+      name      = "migration"
+      image     = "${aws_ecr_repository.main.repository_url}:latest"
+      essential = true
+      environment = [
+        {
+          name  = "MYSQL_USER"
+          value = var.db_username
+        },
+        {
+          name  = "MYSQL_PASSWORD"
+          value = var.db_password
+        },
+        {
+          name  = "MYSQL_DATABASE"
+          value = var.db_name
+        },
+        {
+          name  = "MYSQL_DB_HOST"
+          value = aws_rds_cluster.main.endpoint
+        },
+        {
+          name  = "MYSQL_DB_PORT"
+          value = var.db_port
+        }
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.main.name
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "ecs-migration"
+        }
+      }
+    }
+  ])
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${var.backend_project_name}-migration-task-definition"
+    }
+  )
+}
+
 # ECSサービス
 resource "aws_ecs_service" "main" {
   name            = "ai-sales-copy-generator-api"
