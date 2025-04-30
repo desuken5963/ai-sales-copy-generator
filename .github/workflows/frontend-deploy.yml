@@ -45,4 +45,8 @@ jobs:
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           working-directory: ./frontend
-          vercel-args: '--prod' 
+          vercel-args: '--prod --cwd ./frontend'
+          github-comment: false
+          github-deployment: false
+        env:
+          VERCEL_ENV: production 
