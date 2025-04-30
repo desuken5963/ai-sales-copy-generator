@@ -62,7 +62,7 @@ resource "aws_ecr_repository" "main" {
 
 # タスク定義
 resource "aws_ecs_task_definition" "main" {
-  family                   = "${var.backend_project_name}-api"
+  family                   = var.backend_project_name
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
@@ -187,7 +187,7 @@ resource "aws_ecs_service" "main" {
 
 # CloudWatch Logsグループ
 resource "aws_cloudwatch_log_group" "main" {
-  name              = "/ecs/${var.backend_project_name}-api"
+  name              = "/ecs/${var.backend_project_name}"
   retention_in_days = 30
 
   tags = merge(
