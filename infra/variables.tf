@@ -54,13 +54,14 @@ variable "frontend_project_name" {
 variable "db_username" {
   description = "RDSのユーザー名"
   type        = string
-  default     = "user"
+  default     = "admin"
 }
 
 variable "db_password" {
   description = "RDSのパスワード"
   type        = string
   sensitive   = true
+  default     = ""
 }
 
 variable "db_port" {
