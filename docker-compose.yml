@@ -13,12 +13,29 @@ services:
       db:
         condition: service_healthy
     env_file:
-      - backend/.env
+      - backend/.env.development
+    networks:
+      - app-network
+    profiles:
+      - development
+
+  api-production:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    volumes:
+      - ./backend:/api
+      - ./mysql/my.cnf:/root/.my.cnf
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
     networks:
       - app-network
     profiles:
       - production
-      - development
 
   api-test:
     build:
