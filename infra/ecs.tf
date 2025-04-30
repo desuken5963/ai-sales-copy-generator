@@ -118,6 +118,10 @@ resource "aws_ecs_task_definition" "main" {
         {
           name  = "OPENAI_API_KEY"
           value = var.openai_api_key
+        },
+        {
+          name  = "CORS_ORIGIN"
+          value = "https://${var.domain_name}"
         }
       ]
       healthCheck = {
