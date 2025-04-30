@@ -1,6 +1,6 @@
 # ECSクラスター
 resource "aws_ecs_cluster" "main" {
-  name = var.backend_project_name
+  name = "ai-sales-copy-generator"
 
   setting {
     name  = "containerInsights"
@@ -10,7 +10,7 @@ resource "aws_ecs_cluster" "main" {
   tags = merge(
     local.common_tags,
     {
-      Name = var.backend_project_name
+      Name = "ai-sales-copy-generator"
     }
   )
 }
@@ -148,7 +148,7 @@ resource "aws_ecs_task_definition" "main" {
 
 # ECSサービス
 resource "aws_ecs_service" "main" {
-  name            = "${var.backend_project_name}-api"
+  name            = "ai-sales-copy-generator-api"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.main.arn
   desired_count   = 2
@@ -180,7 +180,7 @@ resource "aws_ecs_service" "main" {
   tags = merge(
     local.common_tags,
     {
-      Name = "${var.backend_project_name}-service"
+      Name = "ai-sales-copy-generator-api"
     }
   )
 }
