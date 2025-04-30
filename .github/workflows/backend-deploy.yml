@@ -68,7 +68,7 @@ jobs:
           TASK_ARN=$(aws ecs run-task \
             --cluster ai-sales-copy-generator \
             --task-definition ai-sales-copy-generator-api-migration \
-            --network-configuration "awsvpcConfiguration={subnets=[$(aws ec2 describe-subnets --filters "Name=tag:Name,Values=dev-private-subnet-1" --query 'Subnets[0].SubnetId' --output text)],securityGroups=[$(aws ec2 describe-security-groups --filters "Name=tag:Name,Values=dev-rds-sg" --query 'SecurityGroups[0].GroupId' --output text)]}" \
+            --network-configuration "awsvpcConfiguration={subnets=[$(aws ec2 describe-subnets --filters "Name=tag:Name,Values=production-private-subnet-1" --query 'Subnets[0].SubnetId' --output text)],securityGroups=[$(aws ec2 describe-security-groups --filters "Name=tag:Name,Values=production-rds-sg" --query 'SecurityGroups[0].GroupId' --output text)]}" \
             --launch-type FARGATE \
             --overrides "{\"containerOverrides\": [{\"name\": \"migration\", \"command\": [\"migrate\", \"-database\", \"mysql://$MYSQL_USER:$MYSQL_PASSWORD@tcp($MYSQL_DB_HOST:$MYSQL_DB_PORT)/$MYSQL_DATABASE\", \"-path\", \"migrations\", \"up\"]}]}" \
             --query 'tasks[0].taskArn' \
