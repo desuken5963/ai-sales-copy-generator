@@ -84,8 +84,24 @@ resource "aws_ecs_task_definition" "main" {
       ]
       environment = [
         {
-          name  = "DATABASE_URL"
-          value = "mysql://${var.db_username}:${var.db_password}@${aws_rds_cluster.main.endpoint}:${var.db_port}/${var.db_name}"
+          name  = "MYSQL_USER"
+          value = var.db_username
+        },
+        {
+          name  = "MYSQL_PASSWORD"
+          value = var.db_password
+        },
+        {
+          name  = "MYSQL_DATABASE"
+          value = var.db_name
+        },
+        {
+          name  = "MYSQL_DB_HOST"
+          value = aws_rds_cluster.main.endpoint
+        },
+        {
+          name  = "MYSQL_DB_PORT"
+          value = var.db_port
         },
         {
           name  = "ENVIRONMENT"
@@ -94,26 +110,6 @@ resource "aws_ecs_task_definition" "main" {
         {
           name  = "PORT"
           value = "8080"
-        },
-        {
-          name  = "DB_USER"
-          value = var.db_username
-        },
-        {
-          name  = "DB_PASSWORD"
-          value = var.db_password
-        },
-        {
-          name  = "DB_HOST"
-          value = aws_rds_cluster.main.endpoint
-        },
-        {
-          name  = "DB_PORT"
-          value = var.db_port
-        },
-        {
-          name  = "DB_NAME"
-          value = var.db_name
         },
         {
           name  = "OPENAI_API_KEY"
@@ -137,7 +133,6 @@ resource "aws_ecs_task_definition" "main" {
           awslogs-group         = aws_cloudwatch_log_group.main.name
           awslogs-region        = var.aws_region
           awslogs-stream-prefix = "ecs"
-          awslogs-timezone      = "Asia/Tokyo"
         }
       }
     }
