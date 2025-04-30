@@ -88,19 +88,6 @@ jobs:
 
           if [ "$EXIT_CODE" != "0" ]; then
             echo "Migration failed with exit code $EXIT_CODE"
-            # ログを取得して表示
-            aws logs get-log-events \
-              --log-group-name "/ecs/ai-sales-copy-generator-api" \
-              --log-stream-name $(aws logs describe-log-streams \
-                --log-group-name "/ecs/ai-sales-copy-generator-api" \
-                --log-stream-name-prefix "ecs-migration" \
-                --order-by LastEventTime \
-                --descending \
-                --limit 1 \
-                --query 'logStreams[0].logStreamName' \
-                --output text) \
-              --query 'events[*].message' \
-              --output text
             exit 1
           fi
 
