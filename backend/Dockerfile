@@ -43,5 +43,6 @@ RUN apt-get update && apt-get install -y ca-certificates tzdata && \
 WORKDIR /api
 COPY --from=builder /api/main ./main
 COPY --from=builder /api/migrations ./migrations
+COPY --from=base /go/bin/migrate /usr/local/bin/migrate
 EXPOSE 8080
 CMD ["./main"]
