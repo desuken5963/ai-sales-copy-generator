@@ -168,6 +168,7 @@ resource "aws_ecs_task_definition" "migration" {
       name      = "migration"
       image     = "${aws_ecr_repository.main.repository_url}:latest"
       essential = true
+      workingDirectory = "/api"
       environment = [
         {
           name  = "MYSQL_USER"
