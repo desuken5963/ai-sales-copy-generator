@@ -32,9 +32,10 @@ COPY . .
 RUN go build -o main ./cmd/api
 
 # 本番環境
-FROM alpine:latest as production
-RUN apk --no-cache add ca-certificates
-WORKDIR /root/
-COPY --from=builder /api/main .
+FROM debian:bullseye-slim as production
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+WORKDIR /api
+COPY --from=builder /api/main ./main
+COPY --from=builder /api/migrations ./migrations
 EXPOSE 8080
 CMD ["./main"]
