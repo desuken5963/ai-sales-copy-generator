@@ -92,15 +92,15 @@ resource "aws_ecs_task_definition" "main" {
       environment = [
         {
           name  = "MYSQL_USER"
-          value = aws_rds_cluster.main.master_username
+          value = var.db_username
         },
         {
           name  = "MYSQL_PASSWORD"
-          value = aws_rds_cluster.main.master_password
+          value = var.db_password
         },
         {
           name  = "MYSQL_DATABASE"
-          value = aws_rds_cluster.main.database_name
+          value = var.db_name
         },
         {
           name  = "MYSQL_DB_HOST"
