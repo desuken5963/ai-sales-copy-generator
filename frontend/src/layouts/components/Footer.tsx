@@ -14,7 +14,7 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/copies/new" className="text-base text-gray-500 hover:text-gray-900">
+                <Link href="/copy/new" className="text-base text-gray-500 hover:text-gray-900">
                   新規作成
                 </Link>
               </li>
