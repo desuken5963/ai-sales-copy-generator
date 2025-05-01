@@ -10,7 +10,7 @@ describe('Footer', () => {
   it('renders navigation links correctly', () => {
     render(<Footer />)
     expect(screen.getByText('ホーム')).toHaveAttribute('href', '/')
-    expect(screen.getByText('新規作成')).toHaveAttribute('href', '/copies/new')
+    expect(screen.getByText('新規作成')).toHaveAttribute('href', '/copy/new')
     expect(screen.getByText('販促コピー一覧')).toHaveAttribute('href', '/copies')
   })
 }) 
