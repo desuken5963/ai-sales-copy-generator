@@ -1,6 +1,8 @@
 # AI Sales Copy Generator
 
 [![デモサイト](https://img.shields.io/badge/DEMO-ai--sales--copy--generator.click-blue)](https://ai-sales-copy-generator.click/)
+[![Tech Stack](https://img.shields.io/badge/Tech-Next.js%20%7C%20Go%20%7C%20AWS-orange)]()
+[![OpenAI](https://img.shields.io/badge/AI-OpenAI%20API-green)]()
 
 ## サービス概要
 
