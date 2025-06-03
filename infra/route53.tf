@@ -11,6 +11,7 @@ resource "aws_route53_zone" "main" {
 }
 
 # ドメイン登録
+/*
 resource "aws_route53domains_registered_domain" "main" {
   provider = aws.us-east-1
   domain_name = var.domain_registration.domain_name
@@ -23,6 +24,7 @@ resource "aws_route53domains_registered_domain" "main" {
     }
   )
 }
+*/
 
 # ACM証明書の検証用DNSレコード
 resource "aws_route53_record" "cert_validation" {
