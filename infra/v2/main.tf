@@ -206,6 +206,24 @@ resource "aws_route53_record" "api" {
   records = [aws_eip.api_server.public_ip]
 }
 
+# フロントエンド用のRoute53レコード（Vercel指定のAレコード）
+resource "aws_route53_record" "frontend" {
+  zone_id = aws_route53_zone.main.zone_id
+  name    = var.hosted_zone_domain  # ai-sales-copy-generator.click
+  type    = "A"
+  ttl     = 300
+  records = ["216.198.79.193"]  # Vercelから指定されたIPアドレス
+}
+
+# www用のRoute53レコード（Vercel指定のCNAMEレコード）
+resource "aws_route53_record" "frontend_www" {
+  zone_id = aws_route53_zone.main.zone_id
+  name    = "www.${var.hosted_zone_domain}"  # www.ai-sales-copy-generator.click
+  type    = "CNAME"
+  ttl     = 300
+  records = ["de07fcbd3e8b888e.vercel-dns-017.com"]  # Vercelから指定されたCNAME
+}
+
 # データソース
 data "aws_availability_zones" "available" {
   state = "available"
