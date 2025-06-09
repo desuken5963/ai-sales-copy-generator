@@ -97,7 +97,7 @@ resource "aws_security_group" "api_server" {
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-  }
+}
 
   # HTTPS
   ingress {
@@ -105,7 +105,7 @@ resource "aws_security_group" "api_server" {
     to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-  }
+}
 
   # SSH
   ingress {
@@ -160,10 +160,15 @@ resource "aws_instance" "api_server" {
   subnet_id             = aws_subnet.public.id
 
   user_data = base64encode(templatefile("${path.module}/user_data.sh", {
-    github_repo    = var.github_repo
-    openai_api_key = var.openai_api_key
-    cors_origin    = var.cors_origin
-    domain_name    = var.domain_name
+    github_repo     = var.github_repo
+    openai_api_key  = var.openai_api_key
+    cors_origin     = var.cors_origin
+    domain_name     = var.domain_name
+    mysql_user      = var.mysql_user
+    mysql_password  = var.mysql_password
+    mysql_database  = var.mysql_database
+    mysql_port      = var.mysql_port
+    mysql_host      = var.mysql_host
   }))
 
   root_block_device {

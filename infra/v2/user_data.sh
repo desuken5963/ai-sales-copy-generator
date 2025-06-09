@@ -7,8 +7,43 @@ exec 2>&1
 # パッケージの更新
 yum update -y
 
+# Amazon Linux Extrasリポジトリの有効化
+amazon-linux-extras install -y nginx1 docker
+
 # 必要なパッケージのインストール
-yum install -y git docker nginx certbot python3-certbot-nginx
+yum install -y git
+
+# EPELリポジトリの有効化とcertbotのインストール
+amazon-linux-extras install -y epel
+yum install -y certbot python2-certbot-nginx
+
+# MySQL公式リポジトリの追加
+yum install -y https://dev.mysql.com/get/mysql80-community-release-el7-7.noarch.rpm
+
+# MySQL 8.0を無効化し、MySQL 5.7を有効化
+yum-config-manager --disable mysql80-community
+yum-config-manager --enable mysql57-community
+
+# MySQLのインストール
+yum install -y mysql-community-server mysql-community-client --nogpgcheck
+
+# MySQLサービスの開始
+systemctl start mysqld
+systemctl enable mysqld
+
+# 一時的なrootパスワードを取得
+TEMP_PASSWORD=$(grep 'temporary password' /var/log/mysqld.log | awk '{print $NF}')
+
+# MySQLの初期設定
+mysql --connect-expired-password -uroot -p"$TEMP_PASSWORD" << MYSQL_EOF
+SET GLOBAL validate_password_policy=LOW;
+SET GLOBAL validate_password_length=4;
+ALTER USER 'root'@'localhost' IDENTIFIED BY '${mysql_password}';
+CREATE DATABASE IF NOT EXISTS ${mysql_database};
+CREATE USER '${mysql_user}'@'localhost' IDENTIFIED BY '${mysql_password}';
+GRANT ALL PRIVILEGES ON ${mysql_database}.* TO '${mysql_user}'@'localhost';
+FLUSH PRIVILEGES;
+MYSQL_EOF
 
 # Dockerの起動と自動起動設定
 systemctl start docker
@@ -24,8 +59,10 @@ tar -C /usr/local -xzf go1.21.5.linux-amd64.tar.gz
 echo 'export PATH=$PATH:/usr/local/go/bin' >> /etc/profile
 echo 'export PATH=$PATH:/usr/local/go/bin' >> /home/ec2-user/.bashrc
 
-#環境変数を設定
+# 環境変数を設定
 export PATH=$PATH:/usr/local/go/bin
+export GOPATH=/opt/go
+export GOCACHE=/tmp/go-cache
 
 # アプリケーションディレクトリの作成
 mkdir -p /opt/api
@@ -41,14 +78,11 @@ cd backend
 # アプリケーションのビルド
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 /usr/local/go/bin/go build -o main ./cmd/api
 
-# SQLiteデータベースディレクトリの作成
-mkdir -p /opt/api/data
-
 # systemdサービスファイルの作成
 cat > /etc/systemd/system/api.service << 'EOF'
 [Unit]
 Description=AI Sales Copy Generator API
-After=network.target
+After=network.target mysqld.service
 
 [Service]
 Type=simple
@@ -60,8 +94,12 @@ RestartSec=3
 Environment=PORT=8080
 Environment=OPENAI_API_KEY=${openai_api_key}
 Environment=CORS_ORIGIN=${cors_origin}
-Environment=DB_TYPE=sqlite
-Environment=DB_PATH=/opt/api/data/app.db
+Environment=MYSQL_USER=${mysql_user}
+Environment=MYSQL_PASSWORD=${mysql_password}
+Environment=MYSQL_DB_HOST=${mysql_host}
+Environment=MYSQL_DB_PORT=${mysql_port}
+Environment=MYSQL_DATABASE=${mysql_database}
+Environment=NEXT_PUBLIC_API_BASE_URL=https://${domain_name}
 
 [Install]
 WantedBy=multi-user.target
@@ -76,6 +114,7 @@ systemctl enable api
 systemctl start api
 
 # Nginxの設定
+mkdir -p /etc/nginx/conf.d
 cat > /etc/nginx/conf.d/api.conf << 'EOF'
 server {
     listen 80;

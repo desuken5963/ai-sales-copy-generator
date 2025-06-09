@@ -63,4 +63,35 @@ variable "cors_origin" {
   default     = "https://ai-sales-copy-generator.click"
 }
 
+# MySQL関連の変数
+variable "mysql_user" {
+  description = "MySQLユーザー名"
+  type        = string
+  default     = "admin"
+}
+
+variable "mysql_password" {
+  description = "MySQLパスワード"
+  type        = string
+  sensitive   = true
+}
+
+variable "mysql_database" {
+  description = "MySQLデータベース名"
+  type        = string
+  default     = "ai_sales_copy_generator"
+}
+
+variable "mysql_port" {
+  description = "MySQLポート番号"
+  type        = string
+  default     = "3306"
+}
+
+variable "mysql_host" {
+  description = "MySQLホスト名"
+  type        = string
+  default     = "localhost"
+} 
+
  

@@ -64,6 +64,14 @@ jobs:
             # backendディレクトリに移動してビルド
             cd backend
             
+            # MySQL接続テスト
+            echo "=== Testing MySQL connection ==="
+            MYSQL_PWD="${{ secrets.MYSQL_PASSWORD }}" mysql -u${{ secrets.MYSQL_USER }} -e "SELECT 1;" ${{ secrets.MYSQL_DATABASE }} || {
+              echo "ERROR: MySQL connection failed!"
+              sudo systemctl status mysqld --no-pager -l
+              exit 1
+            }
+            
             # Goアプリケーションのビルド
             echo "=== Building Go application ==="
             /usr/local/go/bin/go mod download
@@ -78,8 +86,21 @@ jobs:
             # 所有者を正しく設定
             sudo chown -R ec2-user:ec2-user /opt/api
             
-            # SQLiteデータベースディレクトリの作成
-            mkdir -p /opt/api/data
+            # 環境変数の設定（systemdサービスファイルに直接追加）
+            sudo systemctl stop api || true
+            sudo mkdir -p /etc/systemd/system/api.service.d/
+            echo "[Service]" | sudo tee /etc/systemd/system/api.service.d/override.conf
+            echo "Environment=MYSQL_USER=${{ secrets.MYSQL_USER }}" | sudo tee -a /etc/systemd/system/api.service.d/override.conf
+            echo "Environment=MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}" | sudo tee -a /etc/systemd/system/api.service.d/override.conf
+            echo "Environment=MYSQL_DB_HOST=${{ secrets.MYSQL_DB_HOST }}" | sudo tee -a /etc/systemd/system/api.service.d/override.conf
+            echo "Environment=MYSQL_DB_PORT=${{ secrets.MYSQL_DB_PORT }}" | sudo tee -a /etc/systemd/system/api.service.d/override.conf
+            echo "Environment=MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}" | sudo tee -a /etc/systemd/system/api.service.d/override.conf
+            echo "Environment=NEXT_PUBLIC_API_BASE_URL=${{ secrets.NEXT_PUBLIC_API_BASE_URL }}" | sudo tee -a /etc/systemd/system/api.service.d/override.conf
+            echo "Environment=OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" | sudo tee -a /etc/systemd/system/api.service.d/override.conf
+            echo "Environment=CORS_ORIGIN=https://ai-sales-copy-generator.click" | sudo tee -a /etc/systemd/system/api.service.d/override.conf
+            
+            # systemd設定の再読み込み
+            sudo systemctl daemon-reload
             
             # APIサービスの再起動
             echo "=== Restarting API service ==="
