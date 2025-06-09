@@ -3,6 +3,7 @@ name: EC2 Backend Deploy
 on:
   push:
     paths:
+      - '.github/workflows/**'
       - 'backend/**'
       - 'infra/v2/**'
     # branches:
