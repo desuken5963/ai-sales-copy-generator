@@ -99,7 +99,6 @@ Environment=MYSQL_PASSWORD=${mysql_password}
 Environment=MYSQL_DB_HOST=${mysql_host}
 Environment=MYSQL_DB_PORT=${mysql_port}
 Environment=MYSQL_DATABASE=${mysql_database}
-Environment=NEXT_PUBLIC_API_BASE_URL=https://${domain_name}
 
 [Install]
 WantedBy=multi-user.target
