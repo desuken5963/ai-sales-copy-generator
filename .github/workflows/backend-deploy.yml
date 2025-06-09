@@ -39,17 +39,24 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           # 秘密鍵をGitHub Secretsから取得してファイルに保存
-          echo "${{ secrets.EC2_INSTANCE_IP }}" ssh-ed25519 > ~/.ssh/known_hosts || true
           echo "${{ secrets.EC2_PRIVATE_KEY }}" > ~/.ssh/ai-sales-copy-api-key.pem
           chmod 400 ~/.ssh/ai-sales-copy-api-key.pem
-          chmod 600 ~/.ssh/known_hosts
+          
+          # SSH設定でStrictHostKeyCheckingを無効化
+          cat > ~/.ssh/config << 'EOF_SSH_CONFIG'
+          Host *
+              StrictHostKeyChecking no
+              UserKnownHostsFile=/dev/null
+              LogLevel ERROR
+          EOF_SSH_CONFIG
+          chmod 600 ~/.ssh/config
 
       - name: Deploy application to EC2
         run: |
           PUBLIC_IP="${{ secrets.EC2_INSTANCE_IP }}"
           
           # EC2インスタンスに接続してアプリケーションを更新
-          ssh -i ~/.ssh/ai-sales-copy-api-key.pem ec2-user@$PUBLIC_IP << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/ai-sales-copy-api-key.pem ec2-user@$PUBLIC_IP << 'EOF'
             set -e
             
             echo "=== Updating application ==="
@@ -136,7 +143,7 @@ jobs:
           sleep 30
           
           # ヘルスチェック（ポート8080での確認）
-          ssh -i ~/.ssh/ai-sales-copy-api-key.pem ec2-user@$PUBLIC_IP << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/ai-sales-copy-api-key.pem ec2-user@$PUBLIC_IP << 'EOF'
             echo "=== Checking application health ==="
             
             # APIサービスの状態確認
@@ -155,7 +162,7 @@ jobs:
           PUBLIC_IP="${{ secrets.EC2_INSTANCE_IP }}"
           
           # SSL証明書の設定（Let's Encrypt）
-          ssh -i ~/.ssh/ai-sales-copy-api-key.pem ec2-user@$PUBLIC_IP << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/ai-sales-copy-api-key.pem ec2-user@$PUBLIC_IP << 'EOF'
             echo "=== Configuring SSL certificate ==="
             
             # certbotでSSL証明書を取得（非対話モード）
