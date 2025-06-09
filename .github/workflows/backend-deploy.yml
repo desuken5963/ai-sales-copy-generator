@@ -65,17 +65,39 @@ jobs:
             cd backend
             
             # Goアプリケーションのビルド
+            echo "=== Building Go application ==="
             /usr/local/go/bin/go mod download
-            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 /usr/local/go/bin/go build -o main ./cmd/api
+            if ! CGO_ENABLED=0 GOOS=linux GOARCH=amd64 /usr/local/go/bin/go build -o main ./cmd/api; then
+              echo "ERROR: Go build failed!"
+              exit 1
+            fi
+            
+            echo "=== Build completed successfully ==="
+            ls -la main
             
             # 所有者を正しく設定
             sudo chown -R ec2-user:ec2-user /opt/api
             
+            # SQLiteデータベースディレクトリの作成
+            mkdir -p /opt/api/data
+            
             # APIサービスの再起動
+            echo "=== Restarting API service ==="
             sudo systemctl restart api
             
+            # 少し待機
+            sleep 5
+            
             # ステータス確認
+            echo "=== Checking service status ==="
             sudo systemctl status api --no-pager -l
+            
+            # サービスが失敗している場合、詳細ログを表示
+            if ! sudo systemctl is-active --quiet api; then
+              echo "=== Service failed! Checking logs ==="
+              sudo journalctl -u api --no-pager -n 20
+              exit 1
+            fi
             
             echo "=== Deployment completed ==="
           EOF
