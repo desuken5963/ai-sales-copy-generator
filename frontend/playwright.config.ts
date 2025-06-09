@@ -1,7 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const baseURL = process.env.API_BASE_URL || 'http://localhost:3000';
-
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -13,7 +11,7 @@ export default defineConfig({
   ],
   timeout: 30000,
   use: {
-    baseURL,
+    baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
     actionTimeout: 10000,
     navigationTimeout: 10000,
@@ -34,7 +32,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run dev',
-    url: baseURL,
+    url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
   },
 }); 
