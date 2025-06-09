@@ -1,42 +1,27 @@
-name: Backend Deploy
+name: EC2 Backend Deploy
 
 on:
-  pull_request:
+  push:
     paths:
       - 'backend/**'
-    types:
-      - closed
+      - 'infra/v2/**'
     branches:
       - main
-  workflow_run:
-    workflows: ["Backend Tests"]
-    types:
-      - completed
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   deploy:
-    if: ${{ github.event.pull_request.merged == true || (github.event.workflow_run.conclusion == 'success' && github.ref == 'refs/heads/main') }}
     runs-on: ubuntu-latest
     environment: Production
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: ap-northeast-1
-      MYSQL_USER: ${{ secrets.MYSQL_USER }}
-      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-      MYSQL_DB_HOST: ${{ secrets.MYSQL_DB_HOST }}
-      MYSQL_DB_PORT: ${{ secrets.MYSQL_DB_PORT }}
-      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-    steps:
-      - uses: actions/checkout@v4
+      TF_VAR_openai_api_key: ${{ secrets.OPENAI_API_KEY }}
 
-      - name: Debug AWS Credentials
-        run: |
-          echo "AWS_ACCESS_KEY_ID length: ${#AWS_ACCESS_KEY_ID}"
-          echo "AWS_SECRET_ACCESS_KEY length: ${#AWS_SECRET_ACCESS_KEY}"
-          echo "AWS_REGION: $AWS_REGION"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -45,55 +30,152 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-northeast-1
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
 
-      - name: Build and push Docker image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ai-sales-copy-generator-api
-          IMAGE_TAG: ${{ github.sha }}
+      - name: Check if EC2 key pair exists
+        id: check-key
         run: |
-          cd backend
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG --target production .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-
-      - name: Run database migrations
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ai-sales-copy-generator-api
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          # タスクの実行
-          TASK_ARN=$(aws ecs run-task \
-            --cluster ai-sales-copy-generator \
-            --task-definition ai-sales-copy-generator-api-migration \
-            --network-configuration "awsvpcConfiguration={subnets=[$(aws ec2 describe-subnets --filters "Name=tag:Name,Values=production-private-subnet-1" --query 'Subnets[0].SubnetId' --output text)],securityGroups=[$(aws ec2 describe-security-groups --filters "Name=tag:Name,Values=production-rds-sg" --query 'SecurityGroups[0].GroupId' --output text)]}" \
-            --launch-type FARGATE \
-            --overrides "{\"containerOverrides\": [{\"name\": \"migration\", \"command\": [\"migrate\", \"-database\", \"mysql://$MYSQL_USER:$MYSQL_PASSWORD@tcp($MYSQL_DB_HOST:$MYSQL_DB_PORT)/$MYSQL_DATABASE\", \"-path\", \"migrations\", \"up\"]}]}" \
-            --query 'tasks[0].taskArn' \
-            --output text)
-
-          echo "Waiting for migration task to complete..."
-          aws ecs wait tasks-stopped \
-            --cluster ai-sales-copy-generator \
-            --tasks $TASK_ARN
-
-          # タスクの終了ステータスを確認
-          EXIT_CODE=$(aws ecs describe-tasks \
-            --cluster ai-sales-copy-generator \
-            --tasks $TASK_ARN \
-            --query 'tasks[0].containers[0].exitCode' \
-            --output text)
-
-          if [ "$EXIT_CODE" != "0" ]; then
-            echo "Migration failed with exit code $EXIT_CODE"
-            exit 1
+          if aws ec2 describe-key-pairs --key-names ai-sales-copy-api-key --region ap-northeast-1 2>/dev/null; then
+            echo "key_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "key_exists=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Update ECS service
+      - name: Create EC2 key pair if not exists
+        if: steps.check-key.outputs.key_exists == 'false'
         run: |
-          aws ecs update-service --cluster ai-sales-copy-generator --service ai-sales-copy-generator-api --force-new-deployment 
+          aws ec2 create-key-pair --key-name ai-sales-copy-api-key --region ap-northeast-1 > /dev/null
+          echo "Created new EC2 key pair: ai-sales-copy-api-key"
+
+      - name: Terraform Init
+        working-directory: ./infra/v2
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: ./infra/v2
+        run: terraform plan -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}"
+
+      - name: Terraform Apply
+        working-directory: ./infra/v2
+        run: terraform apply -auto-approve -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}"
+
+      - name: Get EC2 instance info
+        id: get-instance
+        working-directory: ./infra/v2
+        run: |
+          INSTANCE_ID=$(terraform output -raw api_server_instance_id)
+          PUBLIC_IP=$(terraform output -raw api_server_public_ip)
+          echo "instance_id=$INSTANCE_ID" >> $GITHUB_OUTPUT
+          echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
+          echo "Instance ID: $INSTANCE_ID"
+          echo "Public IP: $PUBLIC_IP"
+
+      - name: Wait for EC2 instance to be ready
+        run: |
+          echo "Waiting for EC2 instance to be running..."
+          aws ec2 wait instance-running --instance-ids ${{ steps.get-instance.outputs.instance_id }}
+          
+          echo "Waiting for user data script to complete..."
+          sleep 300  # 5分待機（user dataの実行完了を待つ）
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          # 秘密鍵をGitHub Secretsから取得してファイルに保存
+          echo "${{ secrets.EC2_PRIVATE_KEY }}" > ~/.ssh/ai-sales-copy-api-key.pem
+          chmod 400 ~/.ssh/ai-sales-copy-api-key.pem
+          
+          # SSH Host Key の検証をスキップ（初回接続用）
+          echo "Host *" >> ~/.ssh/config
+          echo "  StrictHostKeyChecking no" >> ~/.ssh/config
+
+      - name: Deploy application to EC2
+        run: |
+          PUBLIC_IP="${{ steps.get-instance.outputs.public_ip }}"
+          
+          # EC2インスタンスに接続してアプリケーションを更新
+          ssh -i ~/.ssh/ai-sales-copy-api-key.pem ec2-user@$PUBLIC_IP << 'EOF'
+            set -e
+            
+            echo "=== Updating application ==="
+            cd /opt/api
+            
+            # 最新のコードを取得
+            sudo git fetch origin main
+            sudo git reset --hard origin/main
+            
+            # backendディレクトリに移動してビルド
+            cd backend
+            
+            # Goアプリケーションのビルド
+            /usr/local/go/bin/go mod download
+            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 /usr/local/go/bin/go build -o main ./cmd/api
+            
+            # 所有者を正しく設定
+            sudo chown -R ec2-user:ec2-user /opt/api
+            
+            # APIサービスの再起動
+            sudo systemctl restart api
+            
+            # ステータス確認
+            sudo systemctl status api --no-pager -l
+            
+            echo "=== Deployment completed ==="
+          EOF
+
+      - name: Verify deployment
+        run: |
+          PUBLIC_IP="${{ steps.get-instance.outputs.public_ip }}"
+          
+          # アプリケーションの起動を少し待つ
+          sleep 30
+          
+          # ヘルスチェック（ポート8080での確認）
+          ssh -i ~/.ssh/ai-sales-copy-api-key.pem ec2-user@$PUBLIC_IP << 'EOF'
+            echo "=== Checking application health ==="
+            
+            # APIサービスの状態確認
+            sudo systemctl is-active api
+            
+            # ポートリスニング確認
+            sudo netstat -tlnp | grep :8080 || echo "Port 8080 not found"
+            
+            # アプリケーションログの最後の数行を表示
+            echo "=== Recent application logs ==="
+            sudo journalctl -u api --no-pager -n 10
+          EOF
+
+      - name: Configure SSL certificate
+        run: |
+          PUBLIC_IP="${{ steps.get-instance.outputs.public_ip }}"
+          
+          # SSL証明書の設定（Let's Encrypt）
+          ssh -i ~/.ssh/ai-sales-copy-api-key.pem ec2-user@$PUBLIC_IP << 'EOF'
+            echo "=== Configuring SSL certificate ==="
+            
+            # certbotでSSL証明書を取得（非対話モード）
+            sudo certbot --nginx -d api.ai-sales-copy-generator.click --non-interactive --agree-tos --email admin@ai-sales-copy-generator.click --redirect || true
+            
+            # nginx設定の再読み込み
+            sudo systemctl reload nginx
+            
+            # nginx状態確認
+            sudo systemctl status nginx --no-pager -l
+          EOF
+
+      - name: Display deployment info
+        working-directory: ./infra/v2
+        run: |
+          echo "=== Deployment Summary ==="
+          echo "Instance ID: $(terraform output -raw api_server_instance_id)"
+          echo "Public IP: $(terraform output -raw api_server_public_ip)"
+          echo "Domain: $(terraform output -raw api_server_domain)"
+          echo ""
+          echo "Route53 Name Servers (set these in your domain registrar):"
+          terraform output -json route53_name_servers | jq -r '.[]'
+          echo ""
+          echo "API Endpoint: https://api.ai-sales-copy-generator.click"
+          echo "SSH Command: ssh -i ~/.ssh/ai-sales-copy-api-key.pem ec2-user@$(terraform output -raw api_server_public_ip)" 

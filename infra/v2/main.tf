@@ -12,148 +12,208 @@ provider "aws" {
   region = var.aws_region
 }
 
-# ACM証明書（ap-northeast-1で発行）
-resource "aws_acm_certificate" "api" {
-  domain_name       = var.custom_domain
-  validation_method = "DNS"
-  lifecycle {
-    create_before_destroy = true
+# タグの共通設定
+locals {
+  common_tags = {
+    Project     = "ai-sales-copy-generator"
+    Environment = var.environment
+    ManagedBy   = "terraform"
   }
 }
 
-resource "aws_route53_record" "cert_validation" {
-  for_each = {
-    for dvo in aws_acm_certificate.api.domain_validation_options : dvo.domain_name => {
-      name   = dvo.resource_record_name
-      record = dvo.resource_record_value
-      type   = dvo.resource_record_type
+# VPC
+resource "aws_vpc" "main" {
+  cidr_block           = var.vpc_cidr
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${var.environment}-vpc"
     }
+  )
+}
+
+# パブリックサブネット
+resource "aws_subnet" "public" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = var.public_subnet_cidr
+  availability_zone       = data.aws_availability_zones.available.names[0]
+  map_public_ip_on_launch = true
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${var.environment}-public-subnet"
+    }
+  )
+}
+
+# インターネットゲートウェイ
+resource "aws_internet_gateway" "main" {
+  vpc_id = aws_vpc.main.id
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${var.environment}-igw"
+    }
+  )
+}
+
+# パブリックルートテーブル
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.main.id
   }
-  zone_id = aws_route53_zone.main.id
-  name    = each.value.name
-  type    = each.value.type
-  records = [each.value.record]
-  ttl     = 60
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${var.environment}-public-rt"
+    }
+  )
 }
 
-resource "aws_acm_certificate_validation" "api" {
-  certificate_arn         = aws_acm_certificate.api.arn
-  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
+# パブリックサブネットとルートテーブルの関連付け
+resource "aws_route_table_association" "public" {
+  subnet_id      = aws_subnet.public.id
+  route_table_id = aws_route_table.public.id
 }
 
-# Lambda用IAMロール
-resource "aws_iam_role" "lambda_exec" {
-  name = "lambda_exec_role"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Principal = { Service = "lambda.amazonaws.com" }
-      Action = "sts:AssumeRole"
-    }]
-  })
-}
+# セキュリティグループ
+resource "aws_security_group" "api_server" {
+  name        = "${var.environment}-api-server-sg"
+  description = "Security group for API server"
+  vpc_id      = aws_vpc.main.id
 
-resource "aws_iam_role_policy_attachment" "lambda_basic" {
-  role       = aws_iam_role.lambda_exec.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-}
-
-# ECRリポジトリ（Lambda用）
-resource "aws_ecr_repository" "lambda" {
-  name = "ai-sales-copy-generator-lambda"
-}
-
-# Lambda関数（Goバイナリ or Dockerイメージ）
-resource "aws_lambda_function" "api" {
-  function_name = "api-lambda"
-  role          = aws_iam_role.lambda_exec.arn
-  
-  # Goバイナリzipの場合
-  # filename         = var.lambda_zip_path
-  # handler          = "main"
-  # runtime          = "go1.x"
-
-  # Dockerイメージの場合
-  image_uri        = "${aws_ecr_repository.lambda.repository_url}:latest"
-  package_type     = "Image"
-
-  memory_size      = 128
-  timeout          = 10
-  publish          = true
-
-  environment {
-    variables = var.lambda_env
+  # HTTP
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
-}
 
-# API Gateway HTTP API
-resource "aws_apigatewayv2_api" "api" {
-  name          = "api-http"
-  protocol_type = "HTTP"
-}
-
-# Lambda統合
-resource "aws_apigatewayv2_integration" "lambda" {
-  api_id                 = aws_apigatewayv2_api.api.id
-  integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_function.api.invoke_arn
-  payload_format_version = "2.0"
-}
-
-# ルート（ANY /{proxy+}）
-resource "aws_apigatewayv2_route" "proxy" {
-  api_id    = aws_apigatewayv2_api.api.id
-  route_key = "$default"
-  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
-}
-
-# デプロイ
-resource "aws_apigatewayv2_stage" "default" {
-  api_id      = aws_apigatewayv2_api.api.id
-  name        = "$default"
-  auto_deploy = true
-}
-
-# LambdaにAPI Gatewayからのinvoke権限を付与
-resource "aws_lambda_permission" "apigw" {
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.api.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_apigatewayv2_api.api.execution_arn}/*/*"
-}
-
-# API Gatewayカスタムドメイン
-resource "aws_apigatewayv2_domain_name" "api" {
-  domain_name = var.custom_domain
-  domain_name_configuration {
-    certificate_arn = aws_acm_certificate_validation.api.certificate_arn
-    endpoint_type   = "REGIONAL"
-    security_policy = "TLS_1_2"
+  # HTTPS
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
-}
 
-# API Gateway API Mapping
-resource "aws_apigatewayv2_api_mapping" "api" {
-  api_id      = aws_apigatewayv2_api.api.id
-  domain_name = aws_apigatewayv2_domain_name.api.id
-  stage       = aws_apigatewayv2_stage.default.id
-}
-
-# Route53 ALIASレコード
-resource "aws_route53_record" "api_domain" {
-  zone_id = aws_route53_zone.main.id
-  name    = var.custom_domain
-  type    = "A"
-  alias {
-    name                   = aws_apigatewayv2_domain_name.api.domain_name_configuration[0].target_domain_name
-    zone_id                = aws_apigatewayv2_domain_name.api.domain_name_configuration[0].hosted_zone_id
-    evaluate_target_health = false
+  # SSH
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]  # 本番環境では特定のIPに制限することを推奨
   }
+
+  # API server port
+  ingress {
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${var.environment}-api-server-sg"
+    }
+  )
 }
 
-# Route53ホストゾーン（ドメイン未取得の場合のみ。既存の場合はこのリソースはapplyしないでください）
+# Elastic IP
+resource "aws_eip" "api_server" {
+  domain   = "vpc"
+  instance = aws_instance.api_server.id
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${var.environment}-api-server-eip"
+    }
+  )
+}
+
+# EC2インスタンス
+resource "aws_instance" "api_server" {
+  ami                    = data.aws_ami.amazon_linux.id
+  instance_type          = var.instance_type
+  key_name              = var.key_name
+  vpc_security_group_ids = [aws_security_group.api_server.id]
+  subnet_id             = aws_subnet.public.id
+
+  user_data = base64encode(templatefile("${path.module}/user_data.sh", {
+    github_repo    = var.github_repo
+    openai_api_key = var.openai_api_key
+    cors_origin    = var.cors_origin
+    domain_name    = var.domain_name
+  }))
+
+  root_block_device {
+    volume_type = "gp3"
+    volume_size = 20
+    encrypted   = true
+  }
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${var.environment}-api-server"
+    }
+  )
+}
+
+# Route53ホストゾーン
 resource "aws_route53_zone" "main" {
   name = var.hosted_zone_domain
-} 
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${var.environment}-zone"
+    }
+  )
+}
+
+# Route53レコード
+resource "aws_route53_record" "api" {
+  zone_id = aws_route53_zone.main.zone_id
+  name    = var.domain_name
+  type    = "A"
+  ttl     = 300
+  records = [aws_eip.api_server.public_ip]
+}
+
+# データソース
+data "aws_availability_zones" "available" {
+  state = "available"
+}
+
+data "aws_ami" "amazon_linux" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+}
+
+ 
