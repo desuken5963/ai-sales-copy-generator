@@ -1,9 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const isProduction = process.env.NEXT_PUBLIC_ENVIRONMENT === 'production';
-const baseURL = isProduction 
-  ? 'https://ai-sales-copy-generator.click'
-  : 'http://localhost:3000';
+const baseURL = process.env.API_BASE_URL || 'http://localhost:3000';
 
 export default defineConfig({
   testDir: './e2e',

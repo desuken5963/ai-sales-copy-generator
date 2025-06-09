@@ -33,16 +33,4 @@ resource "vercel_project_environment_variable" "api_base_url" {
     aws_lb.main,
     aws_route53_record.alb
   ]
-}
-
-resource "vercel_project_environment_variable" "environment" {
-  project_id = vercel_project.main.id
-  key        = "NEXT_PUBLIC_ENVIRONMENT"
-  value      = var.environment
-  target     = ["production"]
-
-  depends_on = [
-    aws_lb.main,
-    aws_route53_record.alb
-  ]
 } 

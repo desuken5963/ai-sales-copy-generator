@@ -1,10 +1,6 @@
 import axios from 'axios';
 
 const getBaseURL = () => {
-  const environment = process.env.NEXT_PUBLIC_ENVIRONMENT;
-  if (environment === 'production') {
-    return 'https://api.ai-sales-copy-generator.click/api/v1';
-  }
   return process.env.API_BASE_URL || 'http://localhost:8080/api/v1';
 };
 
@@ -23,7 +19,6 @@ client.interceptors.request.use((config) => {
     headers: config.headers,
     data: config.data,
     baseURL: config.baseURL,
-    environment: process.env.NEXT_PUBLIC_ENVIRONMENT,
     apiBaseUrl: process.env.API_BASE_URL,
     openaiApiKey: process.env.OPENAI_API_KEY ? '***' : 'not set'
   });
