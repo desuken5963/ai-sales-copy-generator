@@ -36,20 +36,14 @@ jobs:
         with:
           terraform_version: 1.6.0
 
-      - name: Check if EC2 key pair exists
-        id: check-key
+      - name: Verify EC2 key pair exists
         run: |
-          if aws ec2 describe-key-pairs --key-names ai-sales-copy-api-key --region ap-northeast-1 2>/dev/null; then
-            echo "key_exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "key_exists=false" >> $GITHUB_OUTPUT
+          if ! aws ec2 describe-key-pairs --key-names ai-sales-copy-api-key --region ap-northeast-1 >/dev/null 2>&1; then
+            echo "ERROR: EC2 key pair 'ai-sales-copy-api-key' not found!"
+            echo "Please create the key pair manually or ensure it exists in the AWS account."
+            exit 1
           fi
-
-      - name: Create EC2 key pair if not exists
-        if: steps.check-key.outputs.key_exists == 'false'
-        run: |
-          aws ec2 create-key-pair --key-name ai-sales-copy-api-key --region ap-northeast-1 > /dev/null
-          echo "Created new EC2 key pair: ai-sales-copy-api-key"
+          echo "EC2 key pair 'ai-sales-copy-api-key' found successfully."
 
       - name: Terraform Init
         working-directory: ./infra/v2
@@ -104,9 +98,9 @@ jobs:
             echo "=== Updating application ==="
             cd /opt/api
             
-            # 最新のコードを取得
-            sudo git fetch origin main
-            sudo git reset --hard origin/main
+            # 最新のコードを取得（現在のブランチ）
+            sudo git fetch origin ${{ github.ref_name }}
+            sudo git reset --hard origin/${{ github.ref_name }}
             
             # backendディレクトリに移動してビルド
             cd backend
