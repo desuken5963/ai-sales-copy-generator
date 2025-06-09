@@ -18,7 +18,6 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: ap-northeast-1
-      TF_VAR_openai_api_key: ${{ secrets.OPENAI_API_KEY }}
 
     steps:
       - name: Checkout code
@@ -31,50 +30,10 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-northeast-1
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.6.0
-
-      - name: Verify EC2 key pair exists
+      - name: Verify EC2 connection
         run: |
-          if ! aws ec2 describe-key-pairs --key-names ai-sales-copy-api-key --region ap-northeast-1 >/dev/null 2>&1; then
-            echo "ERROR: EC2 key pair 'ai-sales-copy-api-key' not found!"
-            echo "Please create the key pair manually or ensure it exists in the AWS account."
-            exit 1
-          fi
-          echo "EC2 key pair 'ai-sales-copy-api-key' found successfully."
-
-      - name: Terraform Init
-        working-directory: ./infra/v2
-        run: terraform init
-
-      - name: Terraform Plan
-        working-directory: ./infra/v2
-        run: terraform plan -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}"
-
-      - name: Terraform Apply
-        working-directory: ./infra/v2
-        run: terraform apply -auto-approve -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}"
-
-      - name: Get EC2 instance info
-        id: get-instance
-        working-directory: ./infra/v2
-        run: |
-          INSTANCE_ID=$(terraform output -raw api_server_instance_id)
-          PUBLIC_IP=$(terraform output -raw api_server_public_ip)
-          echo "instance_id=$INSTANCE_ID" >> $GITHUB_OUTPUT
-          echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
-          echo "Instance ID: $INSTANCE_ID"
-          echo "Public IP: $PUBLIC_IP"
-
-      - name: Wait for EC2 instance to be ready
-        run: |
-          echo "Waiting for EC2 instance to be running..."
-          aws ec2 wait instance-running --instance-ids ${{ steps.get-instance.outputs.instance_id }}
-          
-          echo "Waiting for user data script to complete..."
-          sleep 300  # 5分待機（user dataの実行完了を待つ）
+          echo "Verifying connection to EC2 instance..."
+          echo "EC2 Instance IP: ${{ secrets.EC2_INSTANCE_IP }}"
 
       - name: Setup SSH key
         run: |
@@ -89,7 +48,7 @@ jobs:
 
       - name: Deploy application to EC2
         run: |
-          PUBLIC_IP="${{ steps.get-instance.outputs.public_ip }}"
+          PUBLIC_IP="${{ secrets.EC2_INSTANCE_IP }}"
           
           # EC2インスタンスに接続してアプリケーションを更新
           ssh -i ~/.ssh/ai-sales-copy-api-key.pem ec2-user@$PUBLIC_IP << 'EOF'
@@ -123,7 +82,7 @@ jobs:
 
       - name: Verify deployment
         run: |
-          PUBLIC_IP="${{ steps.get-instance.outputs.public_ip }}"
+          PUBLIC_IP="${{ secrets.EC2_INSTANCE_IP }}"
           
           # アプリケーションの起動を少し待つ
           sleep 30
@@ -145,7 +104,7 @@ jobs:
 
       - name: Configure SSL certificate
         run: |
-          PUBLIC_IP="${{ steps.get-instance.outputs.public_ip }}"
+          PUBLIC_IP="${{ secrets.EC2_INSTANCE_IP }}"
           
           # SSL証明書の設定（Let's Encrypt）
           ssh -i ~/.ssh/ai-sales-copy-api-key.pem ec2-user@$PUBLIC_IP << 'EOF'
@@ -162,15 +121,9 @@ jobs:
           EOF
 
       - name: Display deployment info
-        working-directory: ./infra/v2
         run: |
           echo "=== Deployment Summary ==="
-          echo "Instance ID: $(terraform output -raw api_server_instance_id)"
-          echo "Public IP: $(terraform output -raw api_server_public_ip)"
-          echo "Domain: $(terraform output -raw api_server_domain)"
-          echo ""
-          echo "Route53 Name Servers (set these in your domain registrar):"
-          terraform output -json route53_name_servers | jq -r '.[]'
-          echo ""
+          echo "Public IP: ${{ secrets.EC2_INSTANCE_IP }}"
           echo "API Endpoint: https://api.ai-sales-copy-generator.click"
-          echo "SSH Command: ssh -i ~/.ssh/ai-sales-copy-api-key.pem ec2-user@$(terraform output -raw api_server_public_ip)" 
+          echo "SSH Command: ssh -i ~/.ssh/ai-sales-copy-api-key.pem ec2-user@${{ secrets.EC2_INSTANCE_IP }}"
+          echo "Deployment completed successfully!" 
