@@ -39,10 +39,9 @@ jobs:
       - name: Run tests
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ENV_FILE: ""
           DEBUG: 'true'
         run: |
-          docker compose --profile frontend-test up -d
+          docker compose --profile frontend-test up -d --env OPENAI_API_KEY=${OPENAI_API_KEY}
           docker compose --profile frontend-test exec -T frontend-test npx playwright install --with-deps
           docker compose --profile frontend-test exec -T frontend-test npm run test:unit
           docker compose --profile frontend-test exec -T frontend-test npm run test:e2e
