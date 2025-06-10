@@ -13,8 +13,8 @@ const client = axios.create({
 
 // リクエストインターセプターを追加
 client.interceptors.request.use((config) => {
-  // パスに/api/v1を追加
-  config.url = `${config.url}/api/v1`;
+  // パスに/api/v1を追加（先頭に追加）
+  config.url = `/api/v1${config.url}`;
   
   console.log('API Request:', {
     url: config.url,
