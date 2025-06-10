@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const getBaseURL = () => {
-  return process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api/v1';
+  return process.env.API_BASE_URL || 'http://localhost:8080';
 };
 
 const client = axios.create({
@@ -13,6 +13,9 @@ const client = axios.create({
 
 // リクエストインターセプターを追加
 client.interceptors.request.use((config) => {
+  // パスに/api/v1を追加
+  config.url = `${config.url}/api/v1`;
+  
   console.log('API Request:', {
     url: config.url,
     method: config.method,
