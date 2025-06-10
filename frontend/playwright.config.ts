@@ -16,15 +16,6 @@ export default defineConfig({
     actionTimeout: 10000,
     navigationTimeout: 10000,
   },
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://frontend-test:3000',
-    reuseExistingServer: !process.env.CI,
-    env: {
-      APP_ENV: 'test',
-      API_BASE_URL: 'http://api-test:8080'
-    }
-  },
   projects: [
     {
       name: 'chromium',

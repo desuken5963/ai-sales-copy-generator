@@ -37,6 +37,16 @@ test('新規作成ページが正しく表示される', async ({ page }) => {
 
 test('セールスコピーの生成が正常に動作する', async ({ page }) => {
   // APIリクエストとレスポンスをインターセプト
+  await page.route('**/*', async route => {
+    const url = route.request().url();
+    if (url.includes('localhost:8080')) {
+      const newUrl = url.replace('localhost:8080', 'api-test:8080');
+      route.continue({ url: newUrl });
+    } else {
+      route.continue();
+    }
+  });
+
   page.on('request', request => {
     if (request.url().includes('/copies')) {
       console.log('API Request:', {
