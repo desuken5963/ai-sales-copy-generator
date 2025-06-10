@@ -53,13 +53,6 @@ func main() {
 	// Ginルーターの初期化
 	r := gin.Default()
 
-	// ヘルスチェックエンドポイントの追加
-	r.GET("/api/v1/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"status": "ok",
-		})
-	})
-
 	// CORS設定
 	r.Use(func(c *gin.Context) {
 		// 環境変数から許可するオリジンのリストを取得（カンマ区切り）
@@ -80,11 +73,20 @@ func main() {
 
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		c.Writer.Header().Set("Access-Control-Max-Age", "86400") // 24時間
+
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
 			return
 		}
 		c.Next()
+	})
+
+	// ヘルスチェックエンドポイントの追加
+	r.GET("/api/v1/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"status": "ok",
+		})
 	})
 
 	// ルートの設定

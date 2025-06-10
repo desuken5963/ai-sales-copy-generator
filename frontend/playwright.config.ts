@@ -9,12 +9,12 @@ export default defineConfig({
   reporter: [
     ['html', { open: 'never' }]
   ],
-  timeout: 60000,
+  timeout: 30000,
   use: {
     baseURL: 'http://frontend-test:3000',
     trace: 'on-first-retry',
-    actionTimeout: 30000,
-    navigationTimeout: 30000,
+    actionTimeout: 10000,
+    navigationTimeout: 10000,
   },
   projects: [
     {

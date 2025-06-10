@@ -79,7 +79,7 @@ test('セールスコピーの生成が正常に動作する', async ({ page }) 
   const response = await page.waitForResponse(response => 
     response.url().includes('/copies') && 
     response.request().method() === 'POST'
-  , { timeout: 30000 });
+  );
   console.log('Response received:', {
     status: response.status(),
     data: await response.json().catch(() => 'Failed to parse JSON')
