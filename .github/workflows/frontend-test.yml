@@ -2,9 +2,10 @@ name: Frontend Tests
 
 on:
   push:
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/frontend-test.yml'
+    # 元の条件（必要になったらコメントを外す）
+    # paths:
+    #   - 'frontend/**'
+    #   - '.github/workflows/frontend-test.yml'
 
 jobs:
   test:
