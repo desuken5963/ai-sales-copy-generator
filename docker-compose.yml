@@ -13,7 +13,7 @@ services:
       db:
         condition: service_healthy
     env_file:
-      - ${ENV_FILE:-backend/.env.development}
+      - backend/.env.development
     networks:
       - app-network
     profiles:
@@ -98,7 +98,7 @@ services:
     platform: linux/amd64
     container_name: ai_sales_copy_generator_db
     env_file:
-      - ${ENV_FILE:-backend/.env}
+      - backend/.env.development
     volumes:
       - mysql_data:/var/lib/mysql
       - ./mysql/my.cnf:/etc/mysql/conf.d/my.cnf
