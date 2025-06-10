@@ -14,20 +14,43 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
+      # Docker Buildxのセットアップとキャッシュの設定
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
           version: latest
           install: true
 
-      - name: Set up containers
-        run: |
-          docker compose --profile frontend-test up -d
-          docker compose --profile frontend-test run --rm frontend-test sh -c "npx playwright install --with-deps"
+      # Dockerイメージのキャッシュを復元
+      - name: Cache Docker images
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
 
+      # フロントエンドとAPIのコンテナを並列でビルド
+      - name: Build containers
+        uses: docker/bake-action@v4
+        with:
+          push: false
+          set: |
+            *.cache-from=type=local,src=/tmp/.buildx-cache
+            *.cache-to=type=local,dest=/tmp/.buildx-cache-new
+          files: |
+            docker-compose.yml
+          targets: |
+            frontend-test
+            api-test
+
+      # キャッシュの更新
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      # Playwrightのブラウザをキャッシュ
       - name: Cache Playwright browsers
         uses: actions/cache@v3
         with:
@@ -36,17 +59,20 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pw-browsers-
 
-      - name: Run frontend tests
+      # コンテナを起動してテストを実行
+      - name: Run tests
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           DEBUG: 'true'
         run: |
-          docker compose --profile frontend-test run --rm -e OPENAI_API_KEY=$OPENAI_API_KEY -e DEBUG=true frontend-test sh -c "npm run test:unit && npm run test:e2e"
+          docker compose --profile frontend-test up -d
+          docker compose --profile frontend-test exec -T frontend-test npx playwright install --with-deps
+          docker compose --profile frontend-test exec -T frontend-test npm run test:unit
+          docker compose --profile frontend-test exec -T frontend-test npm run test:e2e
 
-      - name: Show frontend logs (always)
-        if: always()
-        run: docker compose logs frontend-test
-
-      - name: Show API logs (always)
-        if: always()
-        run: docker compose logs api-test 
+      # エラー時のログ出力
+      - name: Show logs (on failure)
+        if: failure()
+        run: |
+          docker compose logs frontend-test
+          docker compose logs api-test 
