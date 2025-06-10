@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -54,7 +55,22 @@ func main() {
 
 	// CORS設定
 	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		// 環境変数から許可するオリジンのリストを取得（カンマ区切り）
+		allowedOriginsEnv := os.Getenv("CORS_ORIGIN")
+		if allowedOriginsEnv == "" {
+			allowedOriginsEnv = "*" // デフォルトはワイルドカード
+		}
+		allowedOrigins := strings.Split(allowedOriginsEnv, ",")
+		origin := c.Request.Header.Get("Origin")
+
+		// リクエストのオリジンが許可リストに含まれているか確認
+		for _, allowedOrigin := range allowedOrigins {
+			if allowedOrigin == origin || allowedOrigin == "*" {
+				c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+				break
+			}
+		}
+
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		if c.Request.Method == "OPTIONS" {
