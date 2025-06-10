@@ -11,7 +11,7 @@ export default defineConfig({
   ],
   timeout: 30000,
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: process.env.CI ? 'http://frontend-test:3000' : 'http://localhost:3000',
     trace: 'on-first-retry',
     actionTimeout: 10000,
     navigationTimeout: 10000,
