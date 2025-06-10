@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const getBaseURL = () => {
-  return process.env.API_BASE_URL || 'http://localhost:8080/api/v1';
+  return process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api/v1';
 };
 
 const client = axios.create({
