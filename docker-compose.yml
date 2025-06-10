@@ -60,7 +60,11 @@ services:
       - CORS_ORIGIN=http://localhost:3000
     command: >
       sh -c "
-        echo 'Starting migrations...' &&
+        echo 'Waiting for database to be ready...' &&
+        while ! mysqladmin ping -h test-db -u test_user -ptest_pass --silent; do
+          sleep 1
+        done &&
+        echo 'Database is ready. Starting migrations...' &&
         migrate -database 'mysql://test_user:test_pass@tcp(test-db:3306)/test_db' -path migrations up &&
         echo 'Migrations completed. Starting server...' &&
         ./main

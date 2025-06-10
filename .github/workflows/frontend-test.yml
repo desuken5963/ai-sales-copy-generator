@@ -39,7 +39,15 @@ jobs:
       - name: Start containers
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: docker compose --profile frontend-test up --build -d --wait
+        run: |
+          echo "Checking for OPENAI_API_KEY..."
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::error::Repository secret OPENAI_API_KEY is not set or empty. Please configure it in Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          echo "OPENAI_API_KEY is set."
+          
+          docker compose --profile frontend-test up --build -d --wait --env-file <(echo "OPENAI_API_KEY=$OPENAI_API_KEY")
 
       - name: Run tests
         run: |
