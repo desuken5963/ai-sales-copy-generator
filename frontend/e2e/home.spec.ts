@@ -53,8 +53,8 @@ test('セールスコピーの生成が正常に動作する', async ({ page }) 
   // フォームを送信
   await page.getByRole('button', { name: '生成する' }).click();
   
-  // 成功メッセージの表示を待機
-  await page.waitForSelector('.fixed.top-4', { timeout: 20000 });
+  // アラートの表示を待機
+  await page.waitForSelector('[role="alert"]');
   
   // 成功メッセージが表示されることを確認
   await expect(page.getByText('コピーが正常に作成されました')).toBeVisible();
