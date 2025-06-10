@@ -107,7 +107,7 @@ jobs:
             echo "Environment=MYSQL_DB_PORT=${{ secrets.MYSQL_DB_PORT }}" | sudo tee -a /etc/systemd/system/api.service.d/override.conf
             echo "Environment=MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}" | sudo tee -a /etc/systemd/system/api.service.d/override.conf
             echo "Environment=OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" | sudo tee -a /etc/systemd/system/api.service.d/override.conf
-            echo "Environment=CORS_ORIGIN=https://ai-sales-copy-generator.click" | sudo tee -a /etc/systemd/system/api.service.d/override.conf
+            echo "Environment=CORS_ORIGIN=https://ai-sales-copy-generator.click,https://www.ai-sales-copy-generator.click" | sudo tee -a /etc/systemd/system/api.service.d/override.conf
             
             # systemd設定の再読み込み
             sudo systemctl daemon-reload
