@@ -21,32 +21,10 @@ jobs:
           version: latest
           install: true
 
-      # Dockerイメージのキャッシュを復元
-      - name: Cache Docker images
-        uses: actions/cache@v3
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-
       # フロントエンドとAPIのコンテナを並列でビルド
       - name: Build containers
-        uses: docker/bake-action@v4
-        with:
-          push: false
-          set: |
-            *.cache-from=type=local,src=/tmp/.buildx-cache
-            *.cache-to=type=local,dest=/tmp/.buildx-cache-new
-          files: |
-            docker-compose.yml
-          load: true
-
-      # キャッシュの更新
-      - name: Move cache
         run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+          docker compose --profile frontend-test build
 
       # Playwrightのブラウザをキャッシュ
       - name: Cache Playwright browsers
