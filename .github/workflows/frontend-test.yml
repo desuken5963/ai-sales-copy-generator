@@ -40,9 +40,7 @@ jobs:
             *.cache-to=type=local,dest=/tmp/.buildx-cache-new
           files: |
             docker-compose.yml
-          targets: |
-            frontend-test
-            api-test
+          load: true
 
       # キャッシュの更新
       - name: Move cache
