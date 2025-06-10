@@ -56,14 +56,25 @@ services:
       - TEST_MYSQL_PASSWORD=test_pass
       - TEST_MYSQL_DATABASE=test_db
       - GIN_MODE=debug
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_API_KEY
+      - CORS_ORIGIN=http://localhost:3000
     command: >
       sh -c "
-        echo 'Starting migrations...' &&
+        echo 'Waiting for database to be ready...' &&
+        while ! mysqladmin ping -h test-db -u test_user -ptest_pass --silent; do
+          sleep 1
+        done &&
+        echo 'Database is ready. Starting migrations...' &&
         migrate -database 'mysql://test_user:test_pass@tcp(test-db:3306)/test_db' -path migrations up &&
         echo 'Migrations completed. Starting server...' &&
         ./main
       "
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - test-network
     profiles:
@@ -83,10 +94,17 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_BASE_URL=http://api-test:8080/api/v1
+      - APP_ENV=test
+      - API_BASE_URL=http://api-test:8080
     depends_on:
       api-test:
-        condition: service_started
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - test-network
     profiles:
@@ -97,7 +115,7 @@ services:
     platform: linux/amd64
     container_name: ai_sales_copy_generator_db
     env_file:
-      - backend/.env
+      - backend/.env.development
     volumes:
       - mysql_data:/var/lib/mysql
       - ./mysql/my.cnf:/etc/mysql/conf.d/my.cnf

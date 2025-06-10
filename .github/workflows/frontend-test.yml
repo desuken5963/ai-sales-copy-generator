@@ -2,9 +2,10 @@ name: Frontend Tests
 
 on:
   push:
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/frontend-test.yml'
+    # 元の条件（必要になったらコメントを外す）
+    # paths:
+    #   - 'frontend/**'
+    #   - '.github/workflows/frontend-test.yml'
 
 jobs:
   test:
@@ -13,20 +14,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
+      # Docker Buildxのセットアップとキャッシュの設定
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
           version: latest
           install: true
 
-      - name: Set up containers
+      # フロントエンドとAPIのコンテナを並列でビルド
+      - name: Build containers
         run: |
-          docker compose --profile frontend-test up -d
-          docker compose --profile frontend-test run --rm frontend-test sh -c "npx playwright install --with-deps"
+          docker compose --profile frontend-test build
 
+      # Playwrightのブラウザをキャッシュ
       - name: Cache Playwright browsers
         uses: actions/cache@v3
         with:
@@ -35,17 +35,28 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pw-browsers-
 
-      - name: Run frontend tests
+      # コンテナを起動してテストを実行
+      - name: Start containers
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          DEBUG: 'true'
         run: |
-          docker compose --profile frontend-test run --rm -e OPENAI_API_KEY=$OPENAI_API_KEY -e DEBUG=true frontend-test sh -c "npm run test:unit && npm run test:e2e"
+          echo "Checking for OPENAI_API_KEY..."
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::error::Repository secret OPENAI_API_KEY is not set or empty. Please configure it in Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          echo "OPENAI_API_KEY is set."
+          
+          export OPENAI_API_KEY=$OPENAI_API_KEY
+          docker compose --profile frontend-test up --build -d --wait
 
-      - name: Show frontend logs (always)
-        if: always()
-        run: docker compose logs frontend-test
+      - name: Run tests
+        run: |
+          docker compose --profile frontend-test exec -T frontend-test sh -c "npx playwright install --with-deps && npm run test:unit && npm run test:e2e"
 
-      - name: Show API logs (always)
-        if: always()
-        run: docker compose logs api-test 
+      # エラー時のログ出力
+      - name: Show logs (on failure)
+        if: failure()
+        run: |
+          docker compose logs frontend-test
+          docker compose logs api-test 

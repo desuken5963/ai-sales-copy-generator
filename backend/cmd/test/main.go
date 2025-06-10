@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -54,14 +55,38 @@ func main() {
 
 	// CORS設定
 	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		// 環境変数から許可するオリジンのリストを取得（カンマ区切り）
+		allowedOriginsEnv := os.Getenv("CORS_ORIGIN")
+		if allowedOriginsEnv == "" {
+			allowedOriginsEnv = "*" // デフォルトはワイルドカード
+		}
+		allowedOrigins := strings.Split(allowedOriginsEnv, ",")
+		origin := c.Request.Header.Get("Origin")
+
+		// リクエストのオリジンが許可リストに含まれているか確認
+		for _, allowedOrigin := range allowedOrigins {
+			if allowedOrigin == origin || allowedOrigin == "*" {
+				c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+				break
+			}
+		}
+
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		c.Writer.Header().Set("Access-Control-Max-Age", "86400") // 24時間
+
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
 			return
 		}
 		c.Next()
+	})
+
+	// ヘルスチェックエンドポイントの追加
+	r.GET("/api/v1/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"status": "ok",
+		})
 	})
 
 	// ルートの設定

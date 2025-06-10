@@ -25,20 +25,8 @@ resource "vercel_project_domain" "main" {
 # 既存のデータソースを削除し、新しいリソースを参照するように変更
 resource "vercel_project_environment_variable" "api_base_url" {
   project_id = vercel_project.main.id
-  key        = "NEXT_PUBLIC_API_BASE_URL"
-  value      = "https://${var.domain_name}/api/v1"
-  target     = ["production"]
-
-  depends_on = [
-    aws_lb.main,
-    aws_route53_record.alb
-  ]
-}
-
-resource "vercel_project_environment_variable" "environment" {
-  project_id = vercel_project.main.id
-  key        = "NEXT_PUBLIC_ENVIRONMENT"
-  value      = var.environment
+  key        = "API_BASE_URL"
+  value      = "https://api.ai-sales-copy-generator.click/api/v1"
   target     = ["production"]
 
   depends_on = [

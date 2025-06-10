@@ -1,0 +1,99 @@
+name: Backend Deploy
+
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+    types:
+      - closed
+    branches:
+      - main
+  workflow_run:
+    workflows: ["Backend Tests"]
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  deploy:
+    if: ${{ github.event.pull_request.merged == true || (github.event.workflow_run.conclusion == 'success' && github.ref == 'refs/heads/main') }}
+    runs-on: ubuntu-latest
+    environment: Production
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ap-northeast-1
+      MYSQL_USER: ${{ secrets.MYSQL_USER }}
+      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+      MYSQL_DB_HOST: ${{ secrets.MYSQL_DB_HOST }}
+      MYSQL_DB_PORT: ${{ secrets.MYSQL_DB_PORT }}
+      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Debug AWS Credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID length: ${#AWS_ACCESS_KEY_ID}"
+          echo "AWS_SECRET_ACCESS_KEY length: ${#AWS_SECRET_ACCESS_KEY}"
+          echo "AWS_REGION: $AWS_REGION"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ai-sales-copy-generator-api
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          cd backend
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG --target production .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Run database migrations
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ai-sales-copy-generator-api
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # タスクの実行
+          TASK_ARN=$(aws ecs run-task \
+            --cluster ai-sales-copy-generator \
+            --task-definition ai-sales-copy-generator-api-migration \
+            --network-configuration "awsvpcConfiguration={subnets=[$(aws ec2 describe-subnets --filters "Name=tag:Name,Values=production-private-subnet-1" --query 'Subnets[0].SubnetId' --output text)],securityGroups=[$(aws ec2 describe-security-groups --filters "Name=tag:Name,Values=production-rds-sg" --query 'SecurityGroups[0].GroupId' --output text)]}" \
+            --launch-type FARGATE \
+            --overrides "{\"containerOverrides\": [{\"name\": \"migration\", \"command\": [\"migrate\", \"-database\", \"mysql://$MYSQL_USER:$MYSQL_PASSWORD@tcp($MYSQL_DB_HOST:$MYSQL_DB_PORT)/$MYSQL_DATABASE\", \"-path\", \"migrations\", \"up\"]}]}" \
+            --query 'tasks[0].taskArn' \
+            --output text)
+
+          echo "Waiting for migration task to complete..."
+          aws ecs wait tasks-stopped \
+            --cluster ai-sales-copy-generator \
+            --tasks $TASK_ARN
+
+          # タスクの終了ステータスを確認
+          EXIT_CODE=$(aws ecs describe-tasks \
+            --cluster ai-sales-copy-generator \
+            --tasks $TASK_ARN \
+            --query 'tasks[0].containers[0].exitCode' \
+            --output text)
+
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "Migration failed with exit code $EXIT_CODE"
+            exit 1
+          fi
+
+      - name: Update ECS service
+        run: |
+          aws ecs update-service --cluster ai-sales-copy-generator --service ai-sales-copy-generator-api --force-new-deployment 

@@ -1,10 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const isProduction = process.env.NEXT_PUBLIC_ENVIRONMENT === 'production';
-const baseURL = isProduction 
-  ? 'https://ai-sales-copy-generator.click'
-  : 'http://localhost:3000';
-
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -16,7 +11,7 @@ export default defineConfig({
   ],
   timeout: 30000,
   use: {
-    baseURL,
+    baseURL: 'http://frontend-test:3000',
     trace: 'on-first-retry',
     actionTimeout: 10000,
     navigationTimeout: 10000,
@@ -34,10 +29,5 @@ export default defineConfig({
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
     },
-  ],
-  webServer: {
-    command: 'npm run dev',
-    url: baseURL,
-    reuseExistingServer: !process.env.CI,
-  },
+  ]
 }); 

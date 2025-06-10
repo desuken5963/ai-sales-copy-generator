@@ -1,42 +1,26 @@
-name: Backend Deploy
+name: EC2 Backend Deploy
 
 on:
-  pull_request:
+  push:
+    branches:
+      - main
     paths:
       - 'backend/**'
-    types:
-      - closed
-    branches:
-      - main
-  workflow_run:
-    workflows: ["Backend Tests"]
-    types:
-      - completed
-    branches:
-      - main
+      - 'infra/v2/**'
+  workflow_dispatch:
 
 jobs:
   deploy:
-    if: ${{ github.event.pull_request.merged == true || (github.event.workflow_run.conclusion == 'success' && github.ref == 'refs/heads/main') }}
     runs-on: ubuntu-latest
     environment: Production
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: ap-northeast-1
-      MYSQL_USER: ${{ secrets.MYSQL_USER }}
-      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-      MYSQL_DB_HOST: ${{ secrets.MYSQL_DB_HOST }}
-      MYSQL_DB_PORT: ${{ secrets.MYSQL_DB_PORT }}
-      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Debug AWS Credentials
-        run: |
-          echo "AWS_ACCESS_KEY_ID length: ${#AWS_ACCESS_KEY_ID}"
-          echo "AWS_SECRET_ACCESS_KEY length: ${#AWS_SECRET_ACCESS_KEY}"
-          echo "AWS_REGION: $AWS_REGION"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -45,55 +29,154 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-northeast-1
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build and push Docker image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ai-sales-copy-generator-api
-          IMAGE_TAG: ${{ github.sha }}
+      - name: Verify EC2 connection
         run: |
-          cd backend
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG --target production .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          echo "Verifying connection to EC2 instance..."
+          echo "EC2 Instance IP: ${{ secrets.EC2_INSTANCE_IP }}"
 
-      - name: Run database migrations
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ai-sales-copy-generator-api
-          IMAGE_TAG: ${{ github.sha }}
+      - name: Setup SSH key
         run: |
-          # タスクの実行
-          TASK_ARN=$(aws ecs run-task \
-            --cluster ai-sales-copy-generator \
-            --task-definition ai-sales-copy-generator-api-migration \
-            --network-configuration "awsvpcConfiguration={subnets=[$(aws ec2 describe-subnets --filters "Name=tag:Name,Values=production-private-subnet-1" --query 'Subnets[0].SubnetId' --output text)],securityGroups=[$(aws ec2 describe-security-groups --filters "Name=tag:Name,Values=production-rds-sg" --query 'SecurityGroups[0].GroupId' --output text)]}" \
-            --launch-type FARGATE \
-            --overrides "{\"containerOverrides\": [{\"name\": \"migration\", \"command\": [\"migrate\", \"-database\", \"mysql://$MYSQL_USER:$MYSQL_PASSWORD@tcp($MYSQL_DB_HOST:$MYSQL_DB_PORT)/$MYSQL_DATABASE\", \"-path\", \"migrations\", \"up\"]}]}" \
-            --query 'tasks[0].taskArn' \
-            --output text)
+          mkdir -p ~/.ssh
+          # 秘密鍵をGitHub Secretsから取得してファイルに保存
+          echo "${{ secrets.EC2_PRIVATE_KEY }}" > ~/.ssh/ai-sales-copy-api-key.pem
+          chmod 400 ~/.ssh/ai-sales-copy-api-key.pem
+          
+          # SSH設定でStrictHostKeyCheckingを無効化
+          cat > ~/.ssh/config << 'EOF_SSH_CONFIG'
+          Host *
+              StrictHostKeyChecking no
+              UserKnownHostsFile=/dev/null
+              LogLevel ERROR
+          EOF_SSH_CONFIG
+          chmod 600 ~/.ssh/config
 
-          echo "Waiting for migration task to complete..."
-          aws ecs wait tasks-stopped \
-            --cluster ai-sales-copy-generator \
-            --tasks $TASK_ARN
-
-          # タスクの終了ステータスを確認
-          EXIT_CODE=$(aws ecs describe-tasks \
-            --cluster ai-sales-copy-generator \
-            --tasks $TASK_ARN \
-            --query 'tasks[0].containers[0].exitCode' \
-            --output text)
-
-          if [ "$EXIT_CODE" != "0" ]; then
-            echo "Migration failed with exit code $EXIT_CODE"
-            exit 1
-          fi
-
-      - name: Update ECS service
+      - name: Deploy application to EC2
         run: |
-          aws ecs update-service --cluster ai-sales-copy-generator --service ai-sales-copy-generator-api --force-new-deployment 
+          PUBLIC_IP="${{ secrets.EC2_INSTANCE_IP }}"
+          
+          # EC2インスタンスに接続してアプリケーションを更新
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/ai-sales-copy-api-key.pem ec2-user@$PUBLIC_IP << 'EOF'
+            set -e
+            
+            echo "=== Updating application ==="
+            cd /opt/api
+            
+            # 最新のコードを取得（現在のブランチ）
+            sudo git fetch origin ${{ github.ref_name }}
+            sudo git reset --hard origin/${{ github.ref_name }}
+            
+            # backendディレクトリに移動してビルド
+            cd backend
+            
+            # MySQL接続テスト
+            echo "=== Testing MySQL connection ==="
+            echo "Testing with user: ${{ secrets.MYSQL_USER }}"
+            echo "Testing with database: ${{ secrets.MYSQL_DATABASE }}"
+            if MYSQL_PWD="${{ secrets.MYSQL_PASSWORD }}" mysql -u${{ secrets.MYSQL_USER }} -e "SELECT 1 as connection_test;" ${{ secrets.MYSQL_DATABASE }}; then
+              echo "MySQL connection successful!"
+            else
+              echo "ERROR: MySQL connection failed!"
+              echo "Checking MySQL service status..."
+              sudo systemctl status mysqld --no-pager -l
+              echo "Checking MySQL users..."
+              sudo mysql -e "SELECT user, host FROM mysql.user WHERE user='${{ secrets.MYSQL_USER }}';"
+              exit 1
+            fi
+            
+            # Goアプリケーションのビルド
+            echo "=== Building Go application ==="
+            /usr/local/go/bin/go mod download
+            if ! CGO_ENABLED=0 GOOS=linux GOARCH=amd64 /usr/local/go/bin/go build -o main ./cmd/api; then
+              echo "ERROR: Go build failed!"
+              exit 1
+            fi
+            
+            echo "=== Build completed successfully ==="
+            ls -la main
+            
+            # 所有者を正しく設定
+            sudo chown -R ec2-user:ec2-user /opt/api
+            
+            # 環境変数の設定（systemdサービスファイルに直接追加）
+            sudo systemctl stop api || true
+            sudo mkdir -p /etc/systemd/system/api.service.d/
+            echo "[Service]" | sudo tee /etc/systemd/system/api.service.d/override.conf
+            echo "Environment=MYSQL_USER=${{ secrets.MYSQL_USER }}" | sudo tee -a /etc/systemd/system/api.service.d/override.conf
+            echo "Environment=MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}" | sudo tee -a /etc/systemd/system/api.service.d/override.conf
+            echo "Environment=MYSQL_DB_HOST=${{ secrets.MYSQL_DB_HOST }}" | sudo tee -a /etc/systemd/system/api.service.d/override.conf
+            echo "Environment=MYSQL_DB_PORT=${{ secrets.MYSQL_DB_PORT }}" | sudo tee -a /etc/systemd/system/api.service.d/override.conf
+            echo "Environment=MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}" | sudo tee -a /etc/systemd/system/api.service.d/override.conf
+            echo "Environment=OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" | sudo tee -a /etc/systemd/system/api.service.d/override.conf
+            echo "Environment=CORS_ORIGIN=https://ai-sales-copy-generator.click,https://www.ai-sales-copy-generator.click" | sudo tee -a /etc/systemd/system/api.service.d/override.conf
+            
+            # systemd設定の再読み込み
+            sudo systemctl daemon-reload
+            
+            # APIサービスの再起動
+            echo "=== Restarting API service ==="
+            sudo systemctl restart api
+            
+            # 少し待機
+            sleep 5
+            
+            # ステータス確認
+            echo "=== Checking service status ==="
+            sudo systemctl status api --no-pager -l
+            
+            # サービスが失敗している場合、詳細ログを表示
+            if ! sudo systemctl is-active --quiet api; then
+              echo "=== Service failed! Checking logs ==="
+              sudo journalctl -u api --no-pager -n 20
+              exit 1
+            fi
+            
+            echo "=== Deployment completed ==="
+          EOF
+
+      - name: Verify deployment
+        run: |
+          PUBLIC_IP="${{ secrets.EC2_INSTANCE_IP }}"
+          
+          # アプリケーションの起動を少し待つ
+          sleep 30
+          
+          # ヘルスチェック（ポート8080での確認）
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/ai-sales-copy-api-key.pem ec2-user@$PUBLIC_IP << 'EOF'
+            echo "=== Checking application health ==="
+            
+            # APIサービスの状態確認
+            sudo systemctl is-active api
+            
+            # ポートリスニング確認
+            sudo netstat -tlnp | grep :8080 || echo "Port 8080 not found"
+            
+            # アプリケーションログの最後の数行を表示
+            echo "=== Recent application logs ==="
+            sudo journalctl -u api --no-pager -n 10
+          EOF
+
+      - name: Configure SSL certificate
+        run: |
+          PUBLIC_IP="${{ secrets.EC2_INSTANCE_IP }}"
+          
+          # SSL証明書の設定（Let's Encrypt）
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/ai-sales-copy-api-key.pem ec2-user@$PUBLIC_IP << 'EOF'
+            echo "=== Configuring SSL certificate ==="
+            
+            # certbotでSSL証明書を取得（非対話モード）
+            sudo certbot --nginx -d api.ai-sales-copy-generator.click --non-interactive --agree-tos --email admin@ai-sales-copy-generator.click --redirect || true
+            
+            # nginx設定の再読み込み
+            sudo systemctl reload nginx
+            
+            # nginx状態確認
+            sudo systemctl status nginx --no-pager -l
+          EOF
+
+      - name: Display deployment info
+        run: |
+          echo "=== Deployment Summary ==="
+          echo "Public IP: ${{ secrets.EC2_INSTANCE_IP }}"
+          echo "API Endpoint: https://api.ai-sales-copy-generator.click"
+          echo "SSH Command: ssh -i ~/.ssh/ai-sales-copy-api-key.pem ec2-user@${{ secrets.EC2_INSTANCE_IP }}"
+          echo "Deployment completed successfully!" 
