@@ -41,10 +41,8 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           DEBUG: 'true'
         run: |
-          docker compose --profile frontend-test up -d -e OPENAI_API_KEY=${OPENAI_API_KEY}
-          docker compose --profile frontend-test exec -T frontend-test npx playwright install --with-deps
-          docker compose --profile frontend-test exec -T frontend-test npm run test:unit
-          docker compose --profile frontend-test exec -T frontend-test npm run test:e2e
+          docker compose --profile frontend-test up -d
+          docker compose --profile frontend-test run --rm -e OPENAI_API_KEY=$OPENAI_API_KEY -e DEBUG=true frontend-test sh -c "npx playwright install --with-deps && npm run test:unit && npm run test:e2e"
 
       # エラー時のログ出力
       - name: Show logs (on failure)
