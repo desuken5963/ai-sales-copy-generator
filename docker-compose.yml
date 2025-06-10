@@ -98,7 +98,7 @@ services:
     platform: linux/amd64
     container_name: ai_sales_copy_generator_db
     env_file:
-      - backend/.env
+      - ${ENV_FILE:-backend/.env}
     volumes:
       - mysql_data:/var/lib/mysql
       - ./mysql/my.cnf:/etc/mysql/conf.d/my.cnf
