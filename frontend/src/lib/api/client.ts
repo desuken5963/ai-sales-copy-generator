@@ -1,9 +1,9 @@
 import axios from 'axios';
 
 const getBaseURL = () => {
-  // テスト環境では常にlocalhost:8080を使用
+  // テスト環境では常にapi-testを使用
   if (process.env.NODE_ENV === 'test') {
-    return 'http://localhost:8080';
+    return 'http://api-test:8080';
   }
   return process.env.API_BASE_URL || 'http://localhost:8080';
 };
