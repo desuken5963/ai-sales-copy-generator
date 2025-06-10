@@ -53,6 +53,13 @@ func main() {
 	// Ginルーターの初期化
 	r := gin.Default()
 
+	// ヘルスチェックエンドポイントの追加
+	r.GET("/api/v1/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"status": "ok",
+		})
+	})
+
 	// CORS設定
 	r.Use(func(c *gin.Context) {
 		// 環境変数から許可するオリジンのリストを取得（カンマ区切り）
