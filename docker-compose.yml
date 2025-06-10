@@ -56,7 +56,7 @@ services:
       - TEST_MYSQL_PASSWORD=test_pass
       - TEST_MYSQL_DATABASE=test_db
       - GIN_MODE=debug
-      - OPENAI_API_KEY=test-key-dummy
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
     command: >
       sh -c "
         echo 'Starting migrations...' &&
