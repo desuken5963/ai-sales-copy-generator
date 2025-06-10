@@ -84,6 +84,7 @@ services:
     ports:
       - "3000:3000"
     environment:
+      - NODE_ENV=test
       - API_BASE_URL=http://api-test:8080
     depends_on:
       api-test:
