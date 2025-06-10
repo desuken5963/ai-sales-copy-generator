@@ -47,7 +47,8 @@ jobs:
           fi
           echo "OPENAI_API_KEY is set."
           
-          docker compose --profile frontend-test up --build -d --wait --env-file <(echo "OPENAI_API_KEY=$OPENAI_API_KEY")
+          export OPENAI_API_KEY=$OPENAI_API_KEY
+          docker compose --profile frontend-test up --build -d --wait
 
       - name: Run tests
         run: |
