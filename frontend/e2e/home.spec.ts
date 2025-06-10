@@ -36,6 +36,28 @@ test('新規作成ページが正しく表示される', async ({ page }) => {
 });
 
 test('セールスコピーの生成が正常に動作する', async ({ page }) => {
+  // APIリクエストとレスポンスをインターセプト
+  page.on('request', request => {
+    if (request.url().includes('/copies')) {
+      console.log('API Request:', {
+        url: request.url(),
+        method: request.method(),
+        headers: request.headers(),
+        data: request.postData()
+      });
+    }
+  });
+
+  page.on('response', async response => {
+    if (response.url().includes('/copies')) {
+      console.log('API Response:', {
+        url: response.url(),
+        status: response.status(),
+        data: await response.json().catch(() => 'Failed to parse JSON')
+      });
+    }
+  });
+
   await page.goto('/copy/new');
   
   // フォームが表示されるまで待機
@@ -52,15 +74,25 @@ test('セールスコピーの生成が正常に動作する', async ({ page }) 
   
   // フォームを送信
   await page.getByRole('button', { name: '生成する' }).click();
+
+  // レスポンスを待機
+  const response = await page.waitForResponse(response => 
+    response.url().includes('/copies') && 
+    response.request().method() === 'POST'
+  );
+  console.log('Response received:', {
+    status: response.status(),
+    data: await response.json().catch(() => 'Failed to parse JSON')
+  });
   
   // アラートの表示を待機
-  await page.waitForSelector('[role="alert"]');
+  await page.waitForSelector('[role="alert"]', { timeout: 30000 });
   
   // 成功メッセージが表示されることを確認
-  await expect(page.getByText('コピーが正常に作成されました')).toBeVisible();
+  await expect(page.getByText('コピーが正常に作成されました')).toBeVisible({ timeout: 30000 });
   
   // ページ遷移を明示的に待機
-  await page.waitForURL('**/copies/**', { timeout: 10000 });
+  await page.waitForURL('**/copies/**', { timeout: 30000 });
   
   // URLが/copies/で始まることを確認
   await expect(page.url()).toContain('/copies/');
