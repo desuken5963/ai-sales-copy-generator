@@ -7,7 +7,7 @@ const getBaseURL = () => {
   }
   if (environment === 'production') {
     // 本番環境ではドメインを固定
-    return 'https://api.ai-sales-copy-generator.click';
+    return process.env.NEXT_PUBLIC_API_BASE_URL;
   }
   // 開発・その他環境は環境変数優先
   return 'http://localhost:8080';
