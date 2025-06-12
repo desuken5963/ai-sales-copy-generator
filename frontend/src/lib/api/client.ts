@@ -1,11 +1,16 @@
 import axios from 'axios';
 
 const getBaseURL = () => {
-  // テスト環境では常にapi-testを使用
-  if (process.env.APP_ENV === 'test') {
+  const environment = process.env.NEXT_PUBLIC_ENVIRONMENT;
+  if (environment === 'test') {
     return 'http://api-test:8080';
   }
-  return process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
+  if (environment === 'production') {
+    // 本番環境ではドメインを固定
+    return process.env.NEXT_PUBLIC_API_BASE_URL;
+  }
+  // 開発・その他環境は環境変数優先
+  return 'http://localhost:8080';
 };
 
 const client = axios.create({
