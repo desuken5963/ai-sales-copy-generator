@@ -7,6 +7,6 @@
     }
   ],
   "env": {
-    "NEXT_PUBLIC_API_BASE_URL": "https://api.ai-sales-copy-generator.click"
+    "API_BASE_URL": "https://api.ai-sales-copy-generator.click"
   }
 }

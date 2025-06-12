@@ -8,7 +8,7 @@ const getBaseURL = () => {
   }
   if (environment === 'production' || environment === 'preview') {
     // 本番・プレビュー環境ではドメインを固定
-    return process.env.NEXT_PUBLIC_API_BASE_URL;
+    return process.env.API_BASE_URL;
   }
   // 開発・その他環境は環境変数優先
   return 'http://localhost:8080';
@@ -32,7 +32,7 @@ client.interceptors.request.use((config) => {
     headers: config.headers,
     data: config.data,
     baseURL: config.baseURL,
-    apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
+    apiBaseUrl: process.env.API_BASE_URL,
     openaiApiKey: process.env.OPENAI_API_KEY ? '***' : 'not set'
   });
   return config;
