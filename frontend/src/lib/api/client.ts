@@ -5,8 +5,8 @@ const getBaseURL = () => {
   if (environment === 'test') {
     return 'http://api-test:8080';
   }
-  if (environment === 'production') {
-    // 本番環境ではドメインを固定
+  if (environment === 'production' || environment === 'preview') {
+    // 本番・プレビュー環境ではドメインを固定
     return process.env.NEXT_PUBLIC_API_BASE_URL;
   }
   // 開発・その他環境は環境変数優先
