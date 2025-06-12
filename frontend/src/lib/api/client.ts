@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const getBaseURL = () => {
   const environment = process.env.NEXT_PUBLIC_ENVIRONMENT;
-  console.log('environment', environment);
+
   if (environment === 'test') {
     return 'http://api-test:8080';
   }
