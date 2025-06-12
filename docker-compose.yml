@@ -95,7 +95,7 @@ services:
       - "3000:3000"
     environment:
       - APP_ENV=test
-      - API_BASE_URL=http://api-test:8080
+      - NEXT_PUBLIC_API_BASE_URL=http://api-test:8080
     depends_on:
       api-test:
         condition: service_healthy
